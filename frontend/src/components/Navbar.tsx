@@ -16,6 +16,14 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
   const { user, logout, quickDemoLogin } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
+  const handlePersonaSwitch = async (role: 'admin' | 'driver' | 'passenger' | 'female-driver') => {
+    await quickDemoLogin(role);
+    if (role === 'admin') setActiveTab('admin');
+    else if (role === 'driver') setActiveTab('offer');
+    else if (role === 'female-driver') setActiveTab('find');
+    else if (role === 'passenger') setActiveTab('find');
+  };
+
   return (
     <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 shadow-sm transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -128,34 +136,54 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
         {/* RIGHT CONTROLS: DEMO PERSONAS, WALLET, THEME TOGGLE */}
         <div className="flex items-center space-x-3">
           
-          {/* HACKATHON DEMO PERSONA SELECTOR */}
+          {/* ROLE / PERSONA FEATURE TABS */}
           {user && (
             <div className="hidden lg:flex items-center space-x-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-[11px] border border-slate-200 dark:border-slate-700">
               <span className="text-slate-400 font-bold px-1.5 flex items-center space-x-1">
                 <Sparkles className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                 <span>Demo:</span>
               </span>
+              
               <button
-                onClick={() => quickDemoLogin('admin')}
-                className="px-2 py-0.5 rounded-lg font-bold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700"
+                onClick={() => handlePersonaSwitch('admin')}
+                className={`px-2 py-0.5 rounded-lg font-bold transition ${
+                  user.role === 'ADMINISTRATOR'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700'
+                }`}
               >
                 Admin
               </button>
+
               <button
-                onClick={() => quickDemoLogin('driver')}
-                className="px-2 py-0.5 rounded-lg font-bold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700"
+                onClick={() => handlePersonaSwitch('driver')}
+                className={`px-2 py-0.5 rounded-lg font-bold transition ${
+                  user.fullName.includes('Marcus')
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700'
+                }`}
               >
                 Driver
               </button>
+
               <button
-                onClick={() => quickDemoLogin('female-driver')}
-                className="px-2 py-0.5 rounded-lg font-bold text-purple-700 dark:text-purple-300 hover:bg-white dark:hover:bg-slate-700"
+                onClick={() => handlePersonaSwitch('female-driver')}
+                className={`px-2 py-0.5 rounded-lg font-bold transition ${
+                  user.fullName.includes('Priya')
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-purple-700 dark:text-purple-300 hover:bg-white dark:hover:bg-slate-700'
+                }`}
               >
                 Women-Only
               </button>
+
               <button
-                onClick={() => quickDemoLogin('passenger')}
-                className="px-2 py-0.5 rounded-lg font-bold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700"
+                onClick={() => handlePersonaSwitch('passenger')}
+                className={`px-2 py-0.5 rounded-lg font-bold transition ${
+                  user.fullName.includes('Elena')
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700'
+                }`}
               >
                 Passenger
               </button>

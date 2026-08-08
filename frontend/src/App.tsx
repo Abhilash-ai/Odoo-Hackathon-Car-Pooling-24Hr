@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -18,9 +18,25 @@ import { MyTrips } from './pages/MyTrips';
 
 const AppContent: React.FC = () => {
   const { user, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  
+  const [activeTab, setActiveTabState] = useState<string>(() => {
+    return localStorage.getItem('odoo_commute_active_tab') || 'dashboard';
+  });
+  
   const [selectedTripId, setSelectedTripId] = useState<string | undefined>(undefined);
   const [showSplash, setShowSplash] = useState<boolean>(true);
+
+  const setActiveTab = (tab: string) => {
+    setActiveTabState(tab);
+    localStorage.setItem('odoo_commute_active_tab', tab);
+  };
+
+  // If Admin persona logs in, ensure admin tab can be loaded cleanly
+  useEffect(() => {
+    if (user?.role === 'ADMINISTRATOR' && activeTab === 'admin') {
+      setActiveTab('admin');
+    }
+  }, [user]);
 
   if (showSplash || loading) {
     return <SplashScreen onFinished={() => setShowSplash(false)} />;
