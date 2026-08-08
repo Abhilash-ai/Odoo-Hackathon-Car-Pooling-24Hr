@@ -17,11 +17,20 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
   const { theme, toggleTheme } = useTheme();
 
   const handlePersonaSwitch = async (role: 'admin' | 'driver' | 'passenger' | 'female-driver') => {
-    await quickDemoLogin(role);
-    if (role === 'admin') setActiveTab('admin');
-    else if (role === 'driver') setActiveTab('offer');
-    else if (role === 'female-driver') setActiveTab('find');
-    else if (role === 'passenger') setActiveTab('find');
+    try {
+      await quickDemoLogin(role);
+      if (role === 'admin') {
+        setActiveTab('admin');
+      } else if (role === 'driver') {
+        setActiveTab('offer');
+      } else if (role === 'female-driver') {
+        setActiveTab('find');
+      } else if (role === 'passenger') {
+        setActiveTab('find');
+      }
+    } catch (err) {
+      console.error('Failed to switch persona tab:', err);
+    }
   };
 
   return (
@@ -133,10 +142,10 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           </nav>
         )}
 
-        {/* RIGHT CONTROLS: DEMO PERSONAS, WALLET, THEME TOGGLE */}
+        {/* RIGHT CONTROLS: ROLE FEATURE TABS, WALLET, THEME TOGGLE */}
         <div className="flex items-center space-x-3">
           
-          {/* ROLE / PERSONA FEATURE TABS */}
+          {/* ROLE / FEATURE TABS */}
           {user && (
             <div className="hidden lg:flex items-center space-x-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-[11px] border border-slate-200 dark:border-slate-700">
               <span className="text-slate-400 font-bold px-1.5 flex items-center space-x-1">
