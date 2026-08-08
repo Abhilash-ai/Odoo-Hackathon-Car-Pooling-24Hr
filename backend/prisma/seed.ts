@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding ODOO COMMUTE (India-First Nagpur & Corporate Roster)...');
+  console.log('🌱 Seeding ODOO COMMUTE (Multiple Indian Scheduled Rides & Fleet)...');
 
   // 1. Create Main Enterprise Organization (Nagpur, Maharashtra, India)
   const org = await prisma.organization.upsert({
@@ -13,8 +13,8 @@ async function main() {
       name: 'Odoo India Technologies Pvt. Ltd.',
       code: 'ODOO-INDIA',
       domain: 'odoo.in',
-      petrolPricePerLiter: 101.50, // Nagpur petrol ₹101.50/L
-      dieselPricePerLiter: 92.00,  // Nagpur diesel ₹92.00/L
+      petrolPricePerLiter: 101.50,
+      dieselPricePerLiter: 92.00,
       cngPricePerKg: 78.00,
       evPricePerKwh: 12.00,
       travelAllowancePerKm: 12.00,
@@ -37,7 +37,7 @@ async function main() {
 
   const defaultPasswordHash = await bcrypt.hash('password123', 10);
 
-  // 2. Create 10+ Indian Employees & Admin
+  // 2. Create 11 Indian Employees & Admin
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@odoo.demo' },
     update: { lastActiveAt: new Date() },
@@ -48,7 +48,7 @@ async function main() {
       fullName: 'Victoria Sterling (Admin)',
       role: 'ADMINISTRATOR',
       gender: 'FEMALE',
-      department: 'Corporate Mobility & Operations',
+      department: 'Corporate Operations',
       workLocation: 'Odoo Campus, Civil Lines, Nagpur',
       phone: '+91 98765 43210',
       avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200',
@@ -110,39 +110,42 @@ async function main() {
     }
   });
 
-  // Additional 7 Indian Employees to make 11 total roster entries
-  const additionalEmployees = [
-    { email: 'rahul.verma@odoo.demo', name: 'Rahul Verma', role: 'EMPLOYEE', gender: 'MALE', dept: 'Backend Engineering', phone: '+91 98220 11223' },
-    { email: 'neha.gupta@odoo.demo', name: 'Neha Gupta', role: 'EMPLOYEE', gender: 'FEMALE', dept: 'QA & Automation', phone: '+91 98220 22334' },
-    { email: 'amit.patel@odoo.demo', name: 'Amit Patel', role: 'EMPLOYEE', gender: 'MALE', dept: 'DevOps & Infra', phone: '+91 98220 33445' },
-    { email: 'ananya.roy@odoo.demo', name: 'Ananya Roy', role: 'EMPLOYEE', gender: 'FEMALE', dept: 'UI/UX Design', phone: '+91 98220 44556' },
-    { email: 'vikram.singh@odoo.demo', name: 'Vikram Singh', role: 'EMPLOYEE', gender: 'MALE', dept: 'Mobile Engineering', phone: '+91 98220 55667' },
-    { email: 'siddharth.rao@odoo.demo', name: 'Siddharth Rao', role: 'EMPLOYEE', gender: 'MALE', dept: 'Data Science', phone: '+91 98220 66778' },
-    { email: 'kavita.reddy@odoo.demo', name: 'Kavita Reddy', role: 'EMPLOYEE', gender: 'FEMALE', dept: 'Product Management', phone: '+91 98220 77889' },
-  ];
+  // Additional Drivers & Passengers
+  const rahul = await prisma.user.upsert({
+    where: { email: 'rahul.verma@odoo.demo' },
+    update: { lastActiveAt: new Date() },
+    create: {
+      organizationId: org.id,
+      email: 'rahul.verma@odoo.demo',
+      passwordHash: defaultPasswordHash,
+      fullName: 'Rahul Verma',
+      role: 'EMPLOYEE',
+      gender: 'MALE',
+      department: 'Backend Engineering',
+      phone: '+91 98220 11223',
+      avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200',
+      wallet: { create: { balance: 1800.0 } }
+    }
+  });
 
-  for (const emp of additionalEmployees) {
-    await prisma.user.upsert({
-      where: { email: emp.email },
-      update: { lastActiveAt: new Date(Date.now() - Math.random() * 600 * 1000) },
-      create: {
-        organizationId: org.id,
-        email: emp.email,
-        passwordHash: defaultPasswordHash,
-        fullName: emp.name,
-        role: emp.role,
-        gender: emp.gender,
-        department: emp.dept,
-        workLocation: 'Odoo Tech Hub, Nagpur',
-        phone: emp.phone,
-        wallet: { create: { balance: 1000.0 } }
-      }
-    });
-  }
+  const neha = await prisma.user.upsert({
+    where: { email: 'neha.gupta@odoo.demo' },
+    update: { lastActiveAt: new Date() },
+    create: {
+      organizationId: org.id,
+      email: 'neha.gupta@odoo.demo',
+      passwordHash: defaultPasswordHash,
+      fullName: 'Neha Gupta',
+      role: 'EMPLOYEE',
+      gender: 'FEMALE',
+      department: 'QA & Automation',
+      phone: '+91 98220 22334',
+      avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200',
+      wallet: { create: { balance: 2100.0 } }
+    }
+  });
 
-  console.log('✓ Demo Indian Users & 11 Roster Entries Created');
-
-  // 3. Create Registered Vehicles (Indian Registration Numbers)
+  // 3. Create Vehicles
   const driverVehicle = await prisma.vehicle.upsert({
     where: { plateNumber: 'MH-31-FA-9021' },
     update: {},
@@ -177,41 +180,53 @@ async function main() {
     }
   });
 
-  const rahulVehicle = await prisma.user.findUnique({ where: { email: 'rahul.verma@odoo.demo' } });
-  if (rahulVehicle) {
-    await prisma.vehicle.upsert({
-      where: { plateNumber: 'MH-31-AB-1234' },
-      update: {},
-      create: {
-        userId: rahulVehicle.id,
-        organizationId: org.id,
-        make: 'Maruti',
-        model: 'Swift ZXi',
-        color: 'Magma Grey',
-        plateNumber: 'MH-31-AB-1234',
-        totalSeats: 4,
-        fuelType: 'CNG',
-        mileageKmL: 25.0,
-        isDefault: true,
-      }
-    });
-  }
+  const rahulVehicle = await prisma.vehicle.upsert({
+    where: { plateNumber: 'MH-31-AB-1234' },
+    update: {},
+    create: {
+      userId: rahul.id,
+      organizationId: org.id,
+      make: 'Maruti',
+      model: 'Swift ZXi',
+      color: 'Magma Grey',
+      plateNumber: 'MH-31-AB-1234',
+      totalSeats: 4,
+      fuelType: 'CNG',
+      mileageKmL: 25.0,
+      isDefault: true,
+    }
+  });
 
-  console.log('✓ Indian registered vehicles seeded');
+  const nehaVehicle = await prisma.vehicle.upsert({
+    where: { plateNumber: 'MH-31-CD-5678' },
+    update: {},
+    create: {
+      userId: neha.id,
+      organizationId: org.id,
+      make: 'Hyundai',
+      model: 'Creta SX',
+      color: 'Titan Grey',
+      plateNumber: 'MH-31-CD-5678',
+      totalSeats: 4,
+      fuelType: 'Diesel',
+      mileageKmL: 19.0,
+      isDefault: true,
+    }
+  });
 
-  // Realistic Polyline coordinates along Nagpur route (Nagpur Railway Station -> Sitabuldi -> Dharampeth)
+  console.log('✓ Vehicles created');
+
   const nagpurPolyline = [
-    [21.1524, 79.0888], // Nagpur Railway Station
-    [21.1505, 79.0835], // Feeder Road
-    [21.1478, 79.0760], // Sitabuldi Square
-    [21.1445, 79.0675], // Law College Square
-    [21.1418, 79.0596]  // Dharampeth Tech Campus
+    [21.1524, 79.0888],
+    [21.1505, 79.0835],
+    [21.1478, 79.0760],
+    [21.1445, 79.0675],
+    [21.1418, 79.0596]
   ];
 
-  // 4. Create Scheduled Commutes on Primary Indian Demo Route
-  const ride1 = await prisma.ride.create({
-    data: {
-      organizationId: org.id,
+  // 4. Seed Multiple Scheduled Rides across Nagpur Routes
+  const ridesToCreate = [
+    {
       driverId: driverUser.id,
       vehicleId: driverVehicle.id,
       originName: 'Nagpur Railway Station, Feeder Rd',
@@ -223,19 +238,13 @@ async function main() {
       departureTime: new Date(Date.now() + 3600 * 1000 * 2),
       availableSeats: 3,
       totalSeats: 4,
-      pricePerSeat: 40.0, // ₹40 / seat
-      estimatedFuelCost: 27.80, // 4.8 km * (₹101.50 / 17.5 km/L) = ₹27.80
+      pricePerSeat: 40.0,
+      estimatedFuelCost: 27.80,
       isWomenOnly: false,
       distanceKm: 4.8,
       durationMins: 14,
-      routePolyline: JSON.stringify(nagpurPolyline),
-      status: 'SCHEDULED',
-    }
-  });
-
-  const womenOnlyRide = await prisma.ride.create({
-    data: {
-      organizationId: org.id,
+    },
+    {
       driverId: femaleDriverUser.id,
       vehicleId: femaleDriverVehicle.id,
       originName: 'Wardha Road Tech Colony, Nagpur',
@@ -247,32 +256,113 @@ async function main() {
       departureTime: new Date(Date.now() + 3600 * 1000 * 3),
       availableSeats: 3,
       totalSeats: 4,
-      pricePerSeat: 35.0, // ₹35 / seat
-      estimatedFuelCost: 13.12, // EV 8.2 km * (₹12 / 7.5 kWh) = ₹13.12
-      isWomenOnly: true, // 🔒 WOMEN ONLY RIDE
+      pricePerSeat: 35.0,
+      estimatedFuelCost: 13.12,
+      isWomenOnly: true, // 🔒 Women-Only
       distanceKm: 8.2,
       durationMins: 18,
-      routePolyline: JSON.stringify(nagpurPolyline),
-      status: 'SCHEDULED',
+    },
+    {
+      driverId: rahul.id,
+      vehicleId: rahulVehicle.id,
+      originName: 'Sitabuldi Square, Nagpur',
+      originLat: 21.1458,
+      originLng: 79.0882,
+      destName: 'Odoo Tech Campus, Dharampeth, Nagpur',
+      destLat: 21.1418,
+      destLng: 79.0596,
+      departureTime: new Date(Date.now() + 3600 * 1000 * 4),
+      availableSeats: 3,
+      totalSeats: 4,
+      pricePerSeat: 30.0,
+      estimatedFuelCost: 10.50,
+      isWomenOnly: false,
+      distanceKm: 3.5,
+      durationMins: 10,
+    },
+    {
+      driverId: neha.id,
+      vehicleId: nehaVehicle.id,
+      originName: 'Civil Lines, Nagpur',
+      originLat: 21.1550,
+      originLng: 79.0720,
+      destName: 'Odoo Tech Campus, Dharampeth, Nagpur',
+      destLat: 21.1418,
+      destLng: 79.0596,
+      departureTime: new Date(Date.now() + 3600 * 1000 * 5),
+      availableSeats: 2,
+      totalSeats: 4,
+      pricePerSeat: 25.0,
+      estimatedFuelCost: 12.00,
+      isWomenOnly: true, // 🔒 Women-Only
+      distanceKm: 3.2,
+      durationMins: 9,
+    },
+    {
+      driverId: driverUser.id,
+      vehicleId: driverVehicle.id,
+      originName: 'Manish Nagar, Wardha Rd, Nagpur',
+      originLat: 21.0920,
+      originLng: 79.0610,
+      destName: 'Odoo Tech Campus, Dharampeth, Nagpur',
+      destLat: 21.1418,
+      destLng: 79.0596,
+      departureTime: new Date(Date.now() + 3600 * 1000 * 6),
+      availableSeats: 3,
+      totalSeats: 4,
+      pricePerSeat: 45.0,
+      estimatedFuelCost: 35.00,
+      isWomenOnly: false,
+      distanceKm: 9.5,
+      durationMins: 22,
     }
-  });
+  ];
 
-  console.log('✓ Active Indian Rides & Women-Only Ride published');
+  const createdRides = [];
+  for (const r of ridesToCreate) {
+    const ride = await prisma.ride.create({
+      data: {
+        organizationId: org.id,
+        driverId: r.driverId,
+        vehicleId: r.vehicleId,
+        originName: r.originName,
+        originLat: r.originLat,
+        originLng: r.originLng,
+        destName: r.destName,
+        destLat: r.destLat,
+        destLng: r.destLng,
+        departureTime: r.departureTime,
+        availableSeats: r.availableSeats,
+        totalSeats: r.totalSeats,
+        pricePerSeat: r.pricePerSeat,
+        estimatedFuelCost: r.estimatedFuelCost,
+        isWomenOnly: r.isWomenOnly,
+        distanceKm: r.distanceKm,
+        durationMins: r.durationMins,
+        routePolyline: JSON.stringify(nagpurPolyline),
+        status: 'SCHEDULED',
+      }
+    });
+    createdRides.push(ride);
+  }
 
-  // 5. Booking & Active Trip with Boarding OTP (e.g. 4829)
+  console.log(`✓ ${createdRides.length} Scheduled Indian Rides published across Nagpur!`);
+
+  // 5. Booking & Active Trip for Live Demo Presentation
+  const activeRide = createdRides[0];
   const booking = await prisma.booking.create({
     data: {
-      rideId: ride1.id,
+      rideId: activeRide.id,
       passengerId: passengerUser.id,
       seatsBooked: 1,
-      totalFare: 40.0, // ₹40
+      totalFare: 40.0,
       pickupName: 'Nagpur Railway Station',
       pickupLat: 21.1524,
       pickupLng: 79.0888,
       dropName: 'Odoo Tech Campus, Dharampeth',
       dropLat: 21.1418,
       dropLng: 79.0596,
-      boardingOtp: '4829', // Boarding OTP for passenger check-in
+      boardingOtp: '4829',
       isCheckedIn: true,
       status: 'CONFIRMED',
     }
@@ -281,7 +371,7 @@ async function main() {
   const activeTrip = await prisma.trip.create({
     data: {
       organizationId: org.id,
-      rideId: ride1.id,
+      rideId: activeRide.id,
       bookingId: booking.id,
       driverId: driverUser.id,
       passengerId: passengerUser.id,
@@ -289,7 +379,7 @@ async function main() {
       boardingOtp: '4829',
       isCheckedIn: true,
       currentLat: 21.1478,
-      currentLng: 79.0760, // Currently near Sitabuldi Square, Nagpur!
+      currentLng: 79.0760,
       startedAt: new Date(Date.now() - 400 * 1000),
       distanceKm: 4.8,
       fareAmount: 40.0,
@@ -297,9 +387,9 @@ async function main() {
     }
   });
 
-  console.log(`✓ Active Trip created on Nagpur route (ID: ${activeTrip.id}, Boarding OTP: 4829)`);
+  console.log(`✓ Active Trip created on Nagpur route (ID: ${activeTrip.id}, OTP: 4829)`);
 
-  // 6. Saved Places in Nagpur
+  // 6. Saved Places
   await prisma.savedPlace.createMany({
     data: [
       { userId: passengerUser.id, label: 'Home', address: 'Sitabuldi Square, Nagpur, Maharashtra', lat: 21.1458, lng: 79.0882 },
@@ -309,23 +399,7 @@ async function main() {
     ]
   });
 
-  // 7. Notifications
-  await prisma.notification.createMany({
-    data: [
-      { userId: passengerUser.id, title: 'Nagpur Commute Confirmed', message: 'Your seat with Marcus Vance (Honda City) is confirmed. Your Boarding OTP is 4829.', type: 'BOOKING' },
-      { userId: femaleDriverUser.id, title: 'Women-Only Commute Live', message: 'Your Women-Only ride from Wardha Road to Dharampeth is active.', type: 'RIDE_OFFER' }
-    ]
-  });
-
-  // 8. Chat Messages
-  await prisma.message.createMany({
-    data: [
-      { tripId: activeTrip.id, senderId: driverUser.id, content: 'Namaste Elena! Waiting near Nagpur Railway Station Gate 1.' },
-      { tripId: activeTrip.id, senderId: passengerUser.id, content: 'Great, coming down from platform exit now! OTP is 4829.' }
-    ]
-  });
-
-  console.log('✅ ODOO COMMUTE India-First Nagpur Seed completed!');
+  console.log('✅ ODOO COMMUTE Seed completed with 5 Scheduled Rides!');
 }
 
 main()
