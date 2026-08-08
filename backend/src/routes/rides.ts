@@ -20,7 +20,7 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * c;
 }
 
-// Generate realistic polyline points for Indian routes (e.g. Nagpur Railway Station -> Dharampeth)
+// Generate realistic polyline points for Indian routes
 function generateRoutePolyline(lat1: number, lng1: number, lat2: number, lng2: number) {
   const steps = 15;
   const polyline: [number, number][] = [];
@@ -43,12 +43,12 @@ router.post('/calculate-route', authenticateToken, async (req: AuthRequest, res:
   }
 
   const distanceKm = haversineKm(Number(originLat), Number(originLng), Number(destLat), Number(destLng));
-  const durationMins = Math.max(5, Math.round(distanceKm * 2.5)); // Realistic Indian traffic commute speed
+  const durationMins = Math.max(5, Math.round(distanceKm * 2.5));
   const polyline = generateRoutePolyline(Number(originLat), Number(originLng), Number(destLat), Number(destLng));
 
   let fuelType = 'Petrol';
   let mileageKmL = 17.5;
-  let unitPrice = 101.50; // ₹ per Litre default (Nagpur, Maharashtra)
+  let unitPrice = 101.50;
 
   if (vehicleId && req.user) {
     const vehicle = await prisma.vehicle.findUnique({ where: { id: vehicleId } });
@@ -87,7 +87,7 @@ router.post('/calculate-route', authenticateToken, async (req: AuthRequest, res:
   });
 });
 
-// PUBLISH RIDE (WITH WOMEN-ONLY OPTION & INR FUEL CALCULATION)
+// PUBLISH RIDE
 router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -133,9 +133,9 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
   const ride = await prisma.ride.create({
     data: {
-      organizationId: req.user.organizationId,
-      driverId: req.user.id,
-      vehicleId: vehicle.id,
+      organization: { connect: { id: req.user.organizationId } },
+      driver: { connect: { id: req.user.id } },
+      vehicle: { connect: { id: vehicle.id } },
       originName,
       originLat: Number(originLat),
       originLng: Number(originLng),
@@ -163,7 +163,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   return res.status(201).json(ride);
 });
 
-// SEARCH & DETERMINISTIC MATCHING ENGINE
+// SEARCH & MATCHING ENGINE
 router.post('/search', authenticateToken, async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -211,7 +211,6 @@ router.post('/search', authenticateToken, async (req: AuthRequest, res: Response
       reasons.push(`🔒 Women-Only Verified Commute`);
     }
 
-    // Origin Proximity
     let originDist = 0;
     if (searchOriginLat !== null && searchOriginLng !== null) {
       originDist = haversineKm(searchOriginLat, searchOriginLng, ride.originLat, ride.originLng);
@@ -229,7 +228,6 @@ router.post('/search', authenticateToken, async (req: AuthRequest, res: Response
       score += 30;
     }
 
-    // Destination Proximity
     let destDist = 0;
     if (searchDestLat !== null && searchDestLng !== null) {
       destDist = haversineKm(searchDestLat, searchDestLng, ride.destLat, ride.destLng);
@@ -247,7 +245,6 @@ router.post('/search', authenticateToken, async (req: AuthRequest, res: Response
       score += 30;
     }
 
-    // Time Proximity
     if (reqTime !== null) {
       const rideTime = new Date(ride.departureTime).getTime();
       const diffMins = Math.abs(rideTime - reqTime) / (1000 * 60);
