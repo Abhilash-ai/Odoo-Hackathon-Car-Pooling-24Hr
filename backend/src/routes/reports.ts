@@ -102,7 +102,7 @@ router.get('/admin', authenticateToken, async (req: AuthRequest, res: Response) 
     include: { ride: { include: { vehicle: true } } }
   });
 
-  const totalDistanceShared = completedTrips.reduce((acc, t) => acc + (t.distanceKm || 24.0), 0);
+  const totalDistanceShared = completedTrips.reduce((acc, t) => acc + (t.distanceKm || 0), 0);
   const totalFareExchanged = completedTrips.reduce((acc, t) => acc + (t.fareAmount || 0), 0);
 
   const fuelRate = (org?.petrolPricePerLiter || 101.50) / 17.5;
@@ -113,7 +113,7 @@ router.get('/admin', authenticateToken, async (req: AuthRequest, res: Response) 
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const dailyTripsData = days.map((day, i) => {
     const multiplier = i % 2 === 0 ? 1.2 : 0.8;
-    const count = Math.max(3, Math.round((completedTripsCount / 5) * multiplier));
+    const count = Math.max(0, Math.round((completedTripsCount / 5) * multiplier));
     const distance = Math.round(count * 22.5);
     const seatsUtilized = Math.min(92, Math.round(68 + i * 3.5));
     return {
@@ -143,37 +143,99 @@ router.get('/admin', authenticateToken, async (req: AuthRequest, res: Response) 
   });
 });
 
-// GET COMMUTE IMPACT REPORT (INR ₹)
+// GET REAL VERIFIABLE COMMUTE IMPACT REPORT (INR ₹)
 router.get('/impact', authenticateToken, async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
 
+  const userId = req.user.id || (req.user as any).userId;
   const orgId = req.user.organizationId;
-  const completedTrips = await prisma.trip.findMany({
-    where: { organizationId: orgId }
-  });
+  const isAdmin = req.user.role === 'ADMINISTRATOR';
 
-  const totalSharedKm = completedTrips.reduce((acc, t) => acc + (t.distanceKm || 24.0), 0) + 480.0;
-  const totalPassengers = completedTrips.length + 84;
-  const estimatedFuelSavedLiters = (totalSharedKm / 17.5).toFixed(1);
-  const estimatedCostSaved = (totalSharedKm * 5.8).toFixed(0);
-  const co2PreventedKg = (totalSharedKm * 0.192).toFixed(1);
+  try {
+    const org = await prisma.organization.findUnique({ where: { id: orgId } });
+    const petrolPrice = org?.petrolPricePerLiter || 101.50;
 
-  return res.json({
-    metrics: {
-      totalSharedKm: Number(totalSharedKm.toFixed(1)),
-      totalPassengers,
-      totalTripsShared: completedTrips.length + 32,
-      avgSeatUtilization: 82.1,
-      estimatedFuelSavedLiters: Number(estimatedFuelSavedLiters),
-      estimatedCostSaved: Number(estimatedCostSaved),
-      co2PreventedKg: Number(co2PreventedKg),
-    },
-    configAssumptions: {
-      petrolPricePerLiter: "₹101.50",
-      avgMileage: "17.5 km/L",
-      co2GramPerKm: 192,
-    }
-  });
+    // 1. PERSONAL COMMUTE ACTIVITY (User's actual completed trips & rides)
+    const myCompletedTrips = await prisma.trip.findMany({
+      where: {
+        OR: [{ driverId: userId }, { passengerId: userId }],
+        status: { in: ['COMPLETED', 'PAYMENT_COMPLETED'] }
+      },
+      include: { ride: { include: { vehicle: true } } }
+    });
+
+    const myRidesTaken = await prisma.trip.count({
+      where: { passengerId: userId, status: { in: ['COMPLETED', 'PAYMENT_COMPLETED'] } }
+    });
+
+    const myRidesOffered = await prisma.ride.count({
+      where: { driverId: userId }
+    });
+
+    const myCommuteDistanceKm = myCompletedTrips.reduce((acc, t) => acc + (t.distanceKm || 0), 0);
+    const myTotalFareInr = myCompletedTrips.reduce((acc, t) => acc + (t.fareAmount || 0), 0);
+
+    // 2. VERIFIED CARPOOL IMPACT (Only completed trips with actual passenger participation)
+    const qualifyingTripsWhereClause = isAdmin
+      ? { organizationId: orgId, status: { in: ['COMPLETED', 'PAYMENT_COMPLETED'] } }
+      : {
+          OR: [{ driverId: userId }, { passengerId: userId }],
+          status: { in: ['COMPLETED', 'PAYMENT_COMPLETED'] }
+        };
+
+    const qualifyingCompletedTrips = await prisma.trip.findMany({
+      where: qualifyingTripsWhereClause,
+      include: { ride: { include: { vehicle: true } }, passenger: true }
+    });
+
+    const sharedTripsCount = qualifyingCompletedTrips.length;
+    const uniquePassengerIds = new Set(qualifyingCompletedTrips.map(t => t.passengerId));
+    const verifiedParticipants = uniquePassengerIds.size;
+
+    const pooledDistanceKm = qualifyingCompletedTrips.reduce((acc, t) => acc + (t.distanceKm || 0), 0);
+    
+    // Average vehicle mileage = 17.5 km/L, 0.192 kg CO2 / km
+    const estimatedFuelAvoidedLiters = Number((pooledDistanceKm / 17.5).toFixed(1));
+    const estimatedCo2AvoidedKg = Number((pooledDistanceKm * 0.192).toFixed(1));
+    const estimatedSharedSavingsInr = Number((pooledDistanceKm * (petrolPrice / 17.5)).toFixed(0));
+
+    return res.json({
+      role: req.user.role,
+      isAdmin,
+      organizationName: org?.name || 'Odoo India',
+      hasSharedData: sharedTripsCount > 0,
+      hasPersonalActivity: myCompletedTrips.length > 0 || myRidesOffered > 0,
+
+      // Personal Commute Activity
+      personalActivity: {
+        completedTripsCount: myCompletedTrips.length,
+        ridesTakenCount: myRidesTaken,
+        ridesOfferedCount: myRidesOffered,
+        commuteDistanceKm: Number(myCommuteDistanceKm.toFixed(1)),
+        totalFareInr: Number(myTotalFareInr.toFixed(0)),
+        avgTripDistanceKm: myCompletedTrips.length > 0 ? Number((myCommuteDistanceKm / myCompletedTrips.length).toFixed(1)) : 0,
+      },
+
+      // Verified Carpool Environmental & Cost Impact
+      carpoolImpact: {
+        sharedTripsCount,
+        verifiedParticipants,
+        pooledDistanceKm: Number(pooledDistanceKm.toFixed(1)),
+        estimatedFuelAvoidedLiters,
+        estimatedCo2AvoidedKg,
+        estimatedSharedSavingsInr,
+      },
+
+      configAssumptions: {
+        petrolPricePerLiter: `₹${petrolPrice.toFixed(2)}`,
+        avgMileage: '17.5 km/L',
+        co2GramPerKm: 192,
+      }
+    });
+  } catch (err) {
+    console.error('Impact calculation error:', err);
+    return res.status(500).json({ error: 'Failed to calculate commute impact' });
+  }
 });
 
 export default router;

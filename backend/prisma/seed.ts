@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding ODOO COMMUTE (Multiple Indian Scheduled Rides & Fleet)...');
+  console.log('🌱 Seeding ODOO COMMUTE (Multiple Indian Scheduled & Completed Rides)...');
 
   // 1. Create Main Enterprise Organization (Nagpur, Maharashtra, India)
   const org = await prisma.organization.upsert({
@@ -110,7 +110,6 @@ async function main() {
     }
   });
 
-  // Additional Drivers & Passengers
   const rahul = await prisma.user.upsert({
     where: { email: 'rahul.verma@odoo.demo' },
     update: { lastActiveAt: new Date() },
@@ -258,7 +257,7 @@ async function main() {
       totalSeats: 4,
       pricePerSeat: 35.0,
       estimatedFuelCost: 13.12,
-      isWomenOnly: true, // 🔒 Women-Only
+      isWomenOnly: true,
       distanceKm: 8.2,
       durationMins: 18,
     },
@@ -294,7 +293,7 @@ async function main() {
       totalSeats: 4,
       pricePerSeat: 25.0,
       estimatedFuelCost: 12.00,
-      isWomenOnly: true, // 🔒 Women-Only
+      isWomenOnly: true,
       distanceKm: 3.2,
       durationMins: 9,
     },
@@ -348,7 +347,7 @@ async function main() {
 
   console.log(`✓ ${createdRides.length} Scheduled Indian Rides published across Nagpur!`);
 
-  // 5. Booking & Active Trip for Live Demo Presentation
+  // 5. Active Trip
   const activeRide = createdRides[0];
   const booking = await prisma.booking.create({
     data: {
@@ -387,19 +386,68 @@ async function main() {
     }
   });
 
-  console.log(`✓ Active Trip created on Nagpur route (ID: ${activeTrip.id}, OTP: 4829)`);
-
-  // 6. Saved Places
-  await prisma.savedPlace.createMany({
-    data: [
-      { userId: passengerUser.id, label: 'Home', address: 'Sitabuldi Square, Nagpur, Maharashtra', lat: 21.1458, lng: 79.0882 },
-      { userId: passengerUser.id, label: 'Office', address: 'Odoo Campus, Dharampeth, Nagpur', lat: 21.1418, lng: 79.0596 },
-      { userId: driverUser.id, label: 'Home', address: 'Wardha Road, Manish Nagar, Nagpur', lat: 21.1032, lng: 79.0538 },
-      { userId: driverUser.id, label: 'Office', address: 'Odoo Campus, Dharampeth, Nagpur', lat: 21.1418, lng: 79.0596 },
-    ]
+  // 6. REAL COMPLETED SHARED TRIP FOR ACCURATE ENVIRONMENTAL & CARPOOL IMPACT
+  const completedRide = await prisma.ride.create({
+    data: {
+      organizationId: org.id,
+      driverId: driverUser.id,
+      vehicleId: driverVehicle.id,
+      originName: 'Nagpur Railway Station, Feeder Rd',
+      originLat: 21.1524,
+      originLng: 79.0888,
+      destName: 'Odoo Tech Campus, Dharampeth, Nagpur',
+      destLat: 21.1418,
+      destLng: 79.0596,
+      departureTime: new Date(Date.now() - 86400 * 1000 * 2),
+      availableSeats: 2,
+      totalSeats: 4,
+      pricePerSeat: 40.0,
+      estimatedFuelCost: 27.80,
+      isWomenOnly: false,
+      distanceKm: 4.8,
+      durationMins: 14,
+      routePolyline: JSON.stringify(nagpurPolyline),
+      status: 'COMPLETED',
+    }
   });
 
-  console.log('✅ ODOO COMMUTE Seed completed with 5 Scheduled Rides!');
+  const completedBooking = await prisma.booking.create({
+    data: {
+      rideId: completedRide.id,
+      passengerId: passengerUser.id,
+      seatsBooked: 1,
+      totalFare: 40.0,
+      pickupName: 'Nagpur Railway Station',
+      pickupLat: 21.1524,
+      pickupLng: 79.0888,
+      dropName: 'Odoo Tech Campus, Dharampeth',
+      dropLat: 21.1418,
+      dropLng: 79.0596,
+      boardingOtp: '1122',
+      isCheckedIn: true,
+      status: 'CONFIRMED',
+    }
+  });
+
+  await prisma.trip.create({
+    data: {
+      organizationId: org.id,
+      rideId: completedRide.id,
+      bookingId: completedBooking.id,
+      driverId: driverUser.id,
+      passengerId: passengerUser.id,
+      status: 'COMPLETED',
+      boardingOtp: '1122',
+      isCheckedIn: true,
+      startedAt: new Date(Date.now() - 86400 * 1000 * 2),
+      completedAt: new Date(Date.now() - 86400 * 1000 * 2 + 14 * 60 * 1000),
+      distanceKm: 4.8,
+      fareAmount: 40.0,
+      paymentStatus: 'PAYMENT_COMPLETED',
+    }
+  });
+
+  console.log('✓ Seeded 1 Real Completed Shared Trip for verifiable carpool impact calculations');
 }
 
 main()

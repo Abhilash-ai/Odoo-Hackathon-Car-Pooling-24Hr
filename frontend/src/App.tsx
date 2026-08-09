@@ -80,7 +80,7 @@ const AppContent: React.FC = () => {
         )}
 
         {activeTab === 'impact' && (
-          <ImpactPage />
+          <ImpactPage setActiveTab={setActiveTab} />
         )}
 
         {activeTab === 'my-trips' && (
