@@ -2,7 +2,7 @@
 
 > **"Turn empty seats into smarter, sustainable commutes across India."**
 
-[![Live Demo](https://img.shields.io/badge/🌐%20Live%20Web%20App-Vercel-10b981?style=for-the-badge&logo=vercel)](https://odoo-hackathon-car-pooling-24hr.vercel.app)
+[![Live Demo](https://img.shields.io/badge/🌐%20Live%20Web%20App-Vercel-10b981?style=for-the-badge&logo=vercel)](https://odoo-hackathon-car-pooling-24-hr.vercel.app/)
 [![Live Backend API](https://img.shields.io/badge/⚙️%20Live%20Backend%20API-Render-000000?style=for-the-badge&logo=render)](https://odoo-hackathon-car-pooling-24hr.onrender.com/api/health)
 [![GitHub Repository](https://img.shields.io/badge/📦%20GitHub-Repository-181717?style=for-the-badge&logo=github)](https://github.com/Abhilash-ai/Odoo-Hackathon-Car-Pooling-24Hr.git)
 
@@ -10,7 +10,7 @@
 
 ## 🌐 LIVE DEPLOYMENT LINKS
 
-- **⚡ Live Web Application**: [https://odoo-hackathon-car-pooling-24hr.vercel.app](https://odoo-hackathon-car-pooling-24hr.vercel.app)
+- **⚡ Live Web Application**: [https://odoo-hackathon-car-pooling-24-hr.vercel.app/](https://odoo-hackathon-car-pooling-24-hr.vercel.app/)
 - **⚙️ Live Backend Service**: [https://odoo-hackathon-car-pooling-24hr.onrender.com/api/health](https://odoo-hackathon-car-pooling-24hr.onrender.com/api/health)
 - **📦 GitHub Repository**: [https://github.com/Abhilash-ai/Odoo-Hackathon-Car-Pooling-24Hr.git](https://github.com/Abhilash-ai/Odoo-Hackathon-Car-Pooling-24Hr.git)
 
@@ -43,7 +43,7 @@
 
 ## 🎬 Quick Presentation Workflow
 
-1. Open **[Live Web App](https://odoo-hackathon-car-pooling-24hr.vercel.app)**.
+1. Open **[Live Web App](https://odoo-hackathon-car-pooling-24-hr.vercel.app/)**.
 2. Click **"1-Click Demo Login -> Marcus Vance (Driver)"**.
 3. Open **Live Commute** -> Observe active commute from **Nagpur Railway Station to Dharampeth Tech Campus**.
 4. Click **"Start Trip Now"** / **"Simulate GPS Motion"** -> Watch car marker move smoothly along Nagpur route polyline with live ETA countdowns.
