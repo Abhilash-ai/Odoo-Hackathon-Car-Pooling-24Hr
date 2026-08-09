@@ -23,15 +23,19 @@ import { HelpSupportPage } from './pages/HelpSupportPage';
 const AppContent: React.FC = () => {
   const { user, loading } = useAuth();
   
-  const [activeTab, setActiveTabState] = useState<string>(() => {
-    return localStorage.getItem('odoo_commute_active_tab') || 'dashboard';
-  });
+  // ALWAYS START AT DASHBOARD ON FRESH APPLICATION STARTUP / PAGE RELOAD
+  const [activeTab, setActiveTabState] = useState<string>('dashboard');
 
-  // NAVIGATION HISTORY STACK FOR ACCURATE BACK NAVIGATION
+  // NAVIGATION HISTORY STACK FOR ACCURATE IN-SESSION BACK NAVIGATION
   const [historyStack, setHistoryStack] = useState<string[]>([]);
   
   const [selectedTripId, setSelectedTripId] = useState<string | undefined>(undefined);
   const [showSplash, setShowSplash] = useState<boolean>(true);
+
+  // Clear stale tab persistence on startup so page reloads always land on Dashboard
+  useEffect(() => {
+    localStorage.removeItem('odoo_commute_active_tab');
+  }, []);
 
   const setActiveTab = (tab: string, skipPush: boolean = false) => {
     if (tab === activeTab) return;
@@ -46,7 +50,6 @@ const AppContent: React.FC = () => {
     }
 
     setActiveTabState(tab);
-    localStorage.setItem('odoo_commute_active_tab', tab);
   };
 
   const goBack = () => {
@@ -54,11 +57,9 @@ const AppContent: React.FC = () => {
       const prevTab = historyStack[historyStack.length - 1];
       setHistoryStack((prev) => prev.slice(0, -1));
       setActiveTabState(prevTab);
-      localStorage.setItem('odoo_commute_active_tab', prevTab);
     } else {
       // Safe fallback to dashboard if no previous navigation history exists
       setActiveTabState('dashboard');
-      localStorage.setItem('odoo_commute_active_tab', 'dashboard');
     }
   };
 
@@ -67,7 +68,6 @@ const AppContent: React.FC = () => {
     const handlePopState = (e: PopStateEvent) => {
       if (e.state && e.state.tab) {
         setActiveTabState(e.state.tab);
-        localStorage.setItem('odoo_commute_active_tab', e.state.tab);
       } else {
         goBack();
       }
