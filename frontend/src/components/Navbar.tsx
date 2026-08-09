@@ -2,6 +2,7 @@ import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { BrandLogo } from './BrandLogo';
+import { NotificationDropdown } from './NotificationDropdown';
 import { 
   Navigation, PlusCircle, Search, Wallet as WalletIcon, Car, Shield, 
   LogOut, Sun, Moon, Sparkles, User as UserIcon, Lock, Settings
@@ -142,7 +143,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           </nav>
         )}
 
-        {/* RIGHT CONTROLS: ROLE FEATURE TABS, WALLET, SETTINGS, THEME TOGGLE */}
+        {/* RIGHT CONTROLS: ROLE FEATURE TABS, WALLET, NOTIFICATIONS, SETTINGS, THEME TOGGLE */}
         <div className="flex items-center space-x-2.5">
           
           {/* ROLE / FEATURE TABS */}
@@ -208,6 +209,11 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
               <WalletIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
               <span>₹{user.walletBalance.toFixed(0)}</span>
             </button>
+          )}
+
+          {/* RESTORED NOTIFICATION BELL & DROPDOWN */}
+          {user && (
+            <NotificationDropdown setActiveTab={setActiveTab} />
           )}
 
           {/* SETTINGS MODULE NAVIGATION */}
