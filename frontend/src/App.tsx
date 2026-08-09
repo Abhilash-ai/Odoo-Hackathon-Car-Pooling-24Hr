@@ -25,14 +25,56 @@ const AppContent: React.FC = () => {
   const [activeTab, setActiveTabState] = useState<string>(() => {
     return localStorage.getItem('odoo_commute_active_tab') || 'dashboard';
   });
+
+  // NAVIGATION HISTORY STACK FOR ACCURATE BACK NAVIGATION
+  const [historyStack, setHistoryStack] = useState<string[]>([]);
   
   const [selectedTripId, setSelectedTripId] = useState<string | undefined>(undefined);
   const [showSplash, setShowSplash] = useState<boolean>(true);
 
-  const setActiveTab = (tab: string) => {
+  const setActiveTab = (tab: string, skipPush: boolean = false) => {
+    if (tab === activeTab) return;
+
+    if (!skipPush) {
+      setHistoryStack((prev) => [...prev, activeTab]);
+      try {
+        window.history.pushState({ tab }, '', `#${tab}`);
+      } catch (e) {
+        // Fallback for restricted environments
+      }
+    }
+
     setActiveTabState(tab);
     localStorage.setItem('odoo_commute_active_tab', tab);
   };
+
+  const goBack = () => {
+    if (historyStack.length > 0) {
+      const prevTab = historyStack[historyStack.length - 1];
+      setHistoryStack((prev) => prev.slice(0, -1));
+      setActiveTabState(prevTab);
+      localStorage.setItem('odoo_commute_active_tab', prevTab);
+    } else {
+      // Safe fallback to dashboard if no previous navigation history exists
+      setActiveTabState('dashboard');
+      localStorage.setItem('odoo_commute_active_tab', 'dashboard');
+    }
+  };
+
+  // LISTEN TO BROWSER AND MOBILE POPSTATE (BACK / FORWARD) EVENTS
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      if (e.state && e.state.tab) {
+        setActiveTabState(e.state.tab);
+        localStorage.setItem('odoo_commute_active_tab', e.state.tab);
+      } else {
+        goBack();
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [historyStack, activeTab]);
 
   // If Admin persona logs in, ensure admin tab can be loaded cleanly
   useEffect(() => {
@@ -95,11 +137,11 @@ const AppContent: React.FC = () => {
         )}
 
         {activeTab === 'saved-places' && (
-          <SavedPlacesPage onBack={() => setActiveTab('settings')} />
+          <SavedPlacesPage onBack={goBack} />
         )}
 
         {activeTab === 'help-support' && (
-          <HelpSupportPage onBack={() => setActiveTab('settings')} />
+          <HelpSupportPage onBack={goBack} />
         )}
       </main>
 
