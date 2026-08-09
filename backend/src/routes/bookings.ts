@@ -9,6 +9,11 @@ const router = Router();
 router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized. Please sign in.' });
 
+  const userId = req.user.id || (req.user as any).userId;
+  if (!userId) {
+    return res.status(401).json({ error: 'User session invalid. Please log in again.' });
+  }
+
   const { rideId, seatsRequested, pickupName, dropName, pickupLat, pickupLng, dropLat, dropLng } = req.body;
   const seats = seatsRequested ? parseInt(seatsRequested, 10) : 1;
 
@@ -32,7 +37,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     return res.status(404).json({ error: 'Selected ride was not found in your organization.' });
   }
 
-  if (ride.driverId === req.user.id) {
+  if (ride.driverId === userId) {
     return res.status(400).json({ error: 'You cannot book a seat on a ride you are driving.' });
   }
 
@@ -59,7 +64,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   const existingBooking = await prisma.booking.findFirst({
     where: {
       rideId: ride.id,
-      passengerId: req.user.id,
+      passengerId: userId,
       status: 'CONFIRMED',
     }
   });
@@ -83,7 +88,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       const booking = await tx.booking.create({
         data: {
           ride: { connect: { id: ride.id } },
-          passenger: { connect: { id: req.user!.id } },
+          passenger: { connect: { id: userId } },
           seatsBooked: seats,
           totalFare,
           pickupName: pickupName || ride.originName,
@@ -113,7 +118,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
           ride: { connect: { id: ride.id } },
           booking: { connect: { id: booking.id } },
           driver: { connect: { id: ride.driverId } },
-          passenger: { connect: { id: req.user!.id } },
+          passenger: { connect: { id: userId } },
           status: 'BOOKED',
           boardingOtp,
           isCheckedIn: false,
@@ -134,7 +139,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
             type: 'BOOKING',
           },
           {
-            userId: req.user!.id,
+            userId: userId,
             title: 'Ride Booked Successfully',
             message: `Your commute with ${ride.driver.fullName} to ${ride.destName} is confirmed! Your Boarding Verification OTP is ${boardingOtp}.`,
             type: 'BOOKING',
@@ -162,8 +167,10 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 router.get('/my-bookings', authenticateToken, async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
 
+  const userId = req.user.id || (req.user as any).userId;
+
   const bookings = await prisma.booking.findMany({
-    where: { passengerId: req.user.id },
+    where: { passengerId: userId },
     include: {
       ride: {
         include: {

@@ -6,14 +6,16 @@ import { authenticateToken } from '../middleware/auth.js';
 import { AuthRequest } from '../types.js';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'odoo-commute-hackathon-jwt-secret-2026';
+const JWT_SECRET = process.env.JWT_SECRET || 'odoo_commute_hackathon_super_secret_jwt_key_2026';
 
 // HEARTBEAT ENDPOINT
 router.post('/heartbeat', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    const userId = req.user?.id || (req.user as any)?.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
     await prisma.user.update({
-      where: { id: req.user.id },
+      where: { id: userId },
       data: { lastActiveAt: new Date() }
     });
     return res.json({ status: 'OK', lastActiveAt: new Date() });
@@ -192,7 +194,7 @@ router.post('/register', async (req: Request, res: Response) => {
     });
 
     const token = jwt.sign(
-      { userId: user.id, organizationId: org.id, role: user.role, gender: user.gender },
+      { id: user.id, userId: user.id, organizationId: org.id, role: user.role, gender: user.gender },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -245,7 +247,7 @@ router.post('/login', async (req: Request, res: Response) => {
     });
 
     const token = jwt.sign(
-      { userId: user.id, organizationId: user.organizationId, role: user.role, gender: user.gender },
+      { id: user.id, userId: user.id, organizationId: user.organizationId, role: user.role, gender: user.gender },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -297,7 +299,7 @@ router.post('/quick-demo', async (req: Request, res: Response) => {
     });
 
     const token = jwt.sign(
-      { userId: user.id, organizationId: user.organizationId, role: user.role, gender: user.gender },
+      { id: user.id, userId: user.id, organizationId: user.organizationId, role: user.role, gender: user.gender },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -328,10 +330,11 @@ router.post('/quick-demo', async (req: Request, res: Response) => {
 // GET ME
 router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    const userId = req.user?.id || (req.user as any)?.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
     const user = await prisma.user.update({
-      where: { id: req.user.id },
+      where: { id: userId },
       data: { lastActiveAt: new Date() },
       include: { organization: true, wallet: true, vehicles: true }
     });
