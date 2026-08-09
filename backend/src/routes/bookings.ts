@@ -5,7 +5,7 @@ import { AuthRequest } from '../types.js';
 
 const router = Router();
 
-// CREATE BOOKING WITH TRANSACTION, DUPLICATE CHECK, & ATOMIC SEAT DEDUCTION
+// CREATE BOOKING WITH TRANSACTION, DUPLICATE CHECK, ATOMIC SEAT DEDUCTION, & DRIVER NOTIFICATION
 router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized. Please sign in.' });
 
@@ -100,6 +100,10 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
           boardingOtp,
           isCheckedIn: false,
           status: 'CONFIRMED',
+        },
+        include: {
+          passenger: { select: { id: true, fullName: true, avatarUrl: true, department: true } },
+          ride: { include: { vehicle: true } }
         }
       });
 
@@ -126,6 +130,11 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
           fareAmount: totalFare,
           currentLat: ride.originLat,
           currentLng: ride.originLng,
+        },
+        include: {
+          passenger: { select: { id: true, fullName: true, avatarUrl: true, department: true } },
+          driver: { select: { id: true, fullName: true, avatarUrl: true, department: true } },
+          ride: { include: { vehicle: true } }
         }
       });
 
@@ -134,13 +143,13 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
         data: [
           {
             userId: ride.driverId,
-            title: 'New Booking Confirmed',
+            title: 'New Booking Confirmed 🚗',
             message: `${req.user!.fullName} booked ${seats} seat(s) on your commute to ${ride.destName}.`,
             type: 'BOOKING',
           },
           {
             userId: userId,
-            title: 'Ride Booked Successfully',
+            title: 'Ride Booked Successfully 🎉',
             message: `Your commute with ${ride.driver.fullName} to ${ride.destName} is confirmed! Your Boarding Verification OTP is ${boardingOtp}.`,
             type: 'BOOKING',
           }
@@ -149,6 +158,26 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
       return { booking, trip, updatedRide, boardingOtp };
     });
+
+    // 5. EMIT REAL-TIME SOCKET.IO NOTIFICATION TO DRIVER
+    const io = req.app.get('io');
+    if (io) {
+      const payload = {
+        title: 'New Seat Booking Received! 🚗',
+        message: `${req.user!.fullName} booked ${seats} seat(s) on your commute to ${ride.destName}.`,
+        booking: result.booking,
+        trip: result.trip,
+        updatedRide: result.updatedRide,
+        driverId: ride.driverId,
+        passengerName: req.user!.fullName,
+        seatsBooked: seats,
+        totalFare,
+        createdAt: new Date().toISOString(),
+      };
+
+      io.to(`user_${ride.driverId}`).emit('new_booking_notification', payload);
+      io.emit('booking_updated', payload);
+    }
 
     return res.status(201).json({
       message: 'Ride booked successfully!',

@@ -28,6 +28,8 @@ const io = new Server(server, {
   },
 });
 
+app.set('io', io);
+
 app.use(cors());
 app.use(express.json());
 
@@ -56,6 +58,12 @@ io.on('connection', (socket) => {
   socket.on('join_trip', (tripId: string) => {
     socket.join(`trip_${tripId}`);
     console.log(`[Socket ${socket.id}] Joined room: trip_${tripId}`);
+  });
+
+  // Join user room for personal notifications
+  socket.on('join_user', (userId: string) => {
+    socket.join(`user_${userId}`);
+    console.log(`[Socket ${socket.id}] Joined user room: user_${userId}`);
   });
 
   // Driver emits GPS update

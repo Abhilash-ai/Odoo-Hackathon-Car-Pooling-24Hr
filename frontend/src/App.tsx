@@ -5,6 +5,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { Navbar } from './components/Navbar';
 import { MobileNav } from './components/MobileNav';
 import { SplashScreen } from './components/SplashScreen';
+import { BookingNotificationToast } from './components/BookingNotificationToast';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { FindRide } from './pages/FindRide';
@@ -94,6 +95,9 @@ const AppContent: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors selection:bg-emerald-500 selection:text-white pb-16 md:pb-0">
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+      
+      {/* REAL-TIME DRIVER BOOKING NOTIFICATION TOAST */}
+      <BookingNotificationToast setActiveTab={setActiveTab} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === 'dashboard' && (
