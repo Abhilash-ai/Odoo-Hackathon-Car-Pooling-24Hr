@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding ODOO COMMUTE (Comprehensive 35-Employee Enterprise Dataset)...');
+  console.log('🌱 Seeding ODOO COMMUTE (35-Employee Enterprise Dataset with Interconnected Activity)...');
 
   // 1. Create Main Enterprise Organization (Nagpur, Maharashtra, India)
   const org = await prisma.organization.upsert({
@@ -170,7 +170,7 @@ async function main() {
 
   console.log(`✓ ${seededEmployees.length} Real Indian Employees seeded across 9 departments!`);
 
-  // 4. Create 10 Vehicles for Drivers
+  // 4. Create Vehicles for Drivers
   const vehiclesToCreate = [
     { user: driverUser, plate: 'MH-31-FA-9021', make: 'Honda', model: 'City i-VTEC', color: 'Orchid White', seats: 4, fuel: 'Petrol', mileage: 17.5 },
     { user: femaleDriverUser, plate: 'MH-31-EV-8842', make: 'Tata', model: 'Nexon EV Max', color: 'Teal Blue', seats: 4, fuel: 'EV', mileage: 7.5 },
@@ -215,18 +215,46 @@ async function main() {
     [21.1418, 79.0596]
   ];
 
-  // 5. Seed 10 COMPLETED Shared Rides (Historical Database Trips)
+  // 5. Seed 25 COMPLETED Shared Rides across 25 Employees (Strictly within last 7 days: daysAgo 0 through 6)
   const completedRidesData = [
-    { driver: driverUser, vehicle: seededVehicles[0], passenger: passengerUser, origin: 'Nagpur Railway Station', dest: 'Odoo Tech Campus, Dharampeth', dist: 4.8, fare: 40.0, daysAgo: 10 },
-    { driver: femaleDriverUser, vehicle: seededVehicles[1], passenger: seededEmployees[5], origin: 'Wardha Road Tech Colony', dest: 'Odoo Tech Campus, Dharampeth', dist: 8.2, fare: 35.0, daysAgo: 9 }, // Priya -> Neha
-    { driver: seededEmployees[4], vehicle: seededVehicles[2], passenger: seededEmployees[6], origin: 'Sitabuldi Square', dest: 'Odoo Tech Campus, Dharampeth', dist: 3.5, fare: 30.0, daysAgo: 8 }, // Rahul -> Amit
-    { driver: seededEmployees[8], vehicle: seededVehicles[4], passenger: seededEmployees[7], origin: 'MIHAN IT Park', dest: 'Odoo Tech Campus, Dharampeth', dist: 12.4, fare: 65.0, daysAgo: 7 }, // Vikram -> Ananya
-    { driver: seededEmployees[9], vehicle: seededVehicles[5], passenger: seededEmployees[10], origin: 'Civil Lines', dest: 'Odoo Tech Campus, Dharampeth', dist: 3.2, fare: 25.0, daysAgo: 6 }, // Siddharth -> Kavita
-    { driver: seededEmployees[13], vehicle: seededVehicles[6], passenger: seededEmployees[12], origin: 'Manish Nagar, Wardha Rd', dest: 'Odoo Tech Campus, Dharampeth', dist: 9.5, fare: 45.0, daysAgo: 5 }, // Tanvi -> Sneha
-    { driver: driverUser, vehicle: seededVehicles[0], passenger: seededEmployees[11], origin: 'Nagpur Railway Station', dest: 'Odoo Tech Campus, Dharampeth', dist: 4.8, fare: 40.0, daysAgo: 4 }, // Marcus -> Aditya
-    { driver: femaleDriverUser, vehicle: seededVehicles[1], passenger: seededEmployees[15], origin: 'Wardha Road Tech Colony', dest: 'Odoo Tech Campus, Dharampeth', dist: 8.2, fare: 35.0, daysAgo: 3 }, // Priya -> Pooja
-    { driver: seededEmployees[14], vehicle: seededVehicles[9], passenger: seededEmployees[16], origin: 'Hingna Road', dest: 'Odoo Tech Campus, Dharampeth', dist: 6.7, fare: 35.0, daysAgo: 2 }, // Rohan -> Amitabh
-    { driver: seededEmployees[8], vehicle: seededVehicles[4], passenger: seededEmployees[17], origin: 'Sadar Market', dest: 'Odoo Tech Campus, Dharampeth', dist: 4.1, fare: 30.0, daysAgo: 1 }, // Vikram -> Meera
+    // Today (0 days ago)
+    { driver: driverUser, vehicle: seededVehicles[0], passenger: passengerUser, origin: 'Nagpur Railway Station', dest: 'Odoo Tech Campus, Dharampeth', dist: 4.8, fare: 40.0, daysAgo: 0 },
+    { driver: femaleDriverUser, vehicle: seededVehicles[1], passenger: seededEmployees[5], origin: 'Wardha Road Tech Colony', dest: 'Odoo Tech Campus, Dharampeth', dist: 8.2, fare: 35.0, daysAgo: 0 },
+    { driver: seededEmployees[4], vehicle: seededVehicles[2], passenger: seededEmployees[6], origin: 'Sitabuldi Square', dest: 'Odoo Tech Campus, Dharampeth', dist: 3.5, fare: 30.0, daysAgo: 0 },
+
+    // Yesterday (1 day ago)
+    { driver: seededEmployees[8], vehicle: seededVehicles[4], passenger: seededEmployees[7], origin: 'MIHAN IT Park', dest: 'Odoo Tech Campus, Dharampeth', dist: 12.4, fare: 65.0, daysAgo: 1 },
+    { driver: seededEmployees[9], vehicle: seededVehicles[5], passenger: seededEmployees[10], origin: 'Civil Lines', dest: 'Odoo Tech Campus, Dharampeth', dist: 3.2, fare: 25.0, daysAgo: 1 },
+    { driver: seededEmployees[13], vehicle: seededVehicles[6], passenger: seededEmployees[12], origin: 'Manish Nagar, Wardha Rd', dest: 'Odoo Tech Campus, Dharampeth', dist: 9.5, fare: 45.0, daysAgo: 1 },
+    { driver: driverUser, vehicle: seededVehicles[0], passenger: seededEmployees[11], origin: 'Nagpur Railway Station', dest: 'Odoo Tech Campus, Dharampeth', dist: 4.8, fare: 40.0, daysAgo: 1 },
+
+    // 2 days ago
+    { driver: femaleDriverUser, vehicle: seededVehicles[1], passenger: seededEmployees[15], origin: 'Wardha Road Tech Colony', dest: 'Odoo Tech Campus, Dharampeth', dist: 8.2, fare: 35.0, daysAgo: 2 },
+    { driver: seededEmployees[14], vehicle: seededVehicles[9], passenger: seededEmployees[16], origin: 'Hingna Road', dest: 'Odoo Tech Campus, Dharampeth', dist: 6.7, fare: 35.0, daysAgo: 2 },
+    { driver: seededEmployees[8], vehicle: seededVehicles[4], passenger: seededEmployees[17], origin: 'Sadar Market', dest: 'Odoo Tech Campus, Dharampeth', dist: 4.1, fare: 30.0, daysAgo: 2 },
+    { driver: seededEmployees[4], vehicle: seededVehicles[2], passenger: seededEmployees[18], origin: 'Pratap Nagar', dest: 'Odoo Tech Campus, Dharampeth', dist: 4.5, fare: 30.0, daysAgo: 2 },
+
+    // 3 days ago
+    { driver: driverUser, vehicle: seededVehicles[0], passenger: seededEmployees[19], origin: 'Trimurti Nagar', dest: 'Odoo Tech Campus, Dharampeth', dist: 5.2, fare: 35.0, daysAgo: 3 },
+    { driver: femaleDriverUser, vehicle: seededVehicles[1], passenger: seededEmployees[20], origin: 'Wardha Road Tech Colony', dest: 'Odoo Tech Campus, Dharampeth', dist: 8.2, fare: 35.0, daysAgo: 3 },
+    { driver: seededEmployees[5], vehicle: seededVehicles[3], passenger: seededEmployees[21], origin: 'Civil Lines', dest: 'Odoo Tech Campus, Dharampeth', dist: 3.2, fare: 25.0, daysAgo: 3 },
+    { driver: seededEmployees[9], vehicle: seededVehicles[5], passenger: seededEmployees[22], origin: 'Sitabuldi Square', dest: 'Odoo Tech Campus, Dharampeth', dist: 3.5, fare: 30.0, daysAgo: 3 },
+
+    // 4 days ago
+    { driver: seededEmployees[13], vehicle: seededVehicles[6], passenger: seededEmployees[23], origin: 'Sadar Market', dest: 'Odoo Tech Campus, Dharampeth', dist: 4.1, fare: 30.0, daysAgo: 4 },
+    { driver: seededEmployees[11], vehicle: seededVehicles[7], passenger: seededEmployees[24], origin: 'Hingna Road', dest: 'Odoo Tech Campus, Dharampeth', dist: 6.7, fare: 35.0, daysAgo: 4 },
+    { driver: seededEmployees[12], vehicle: seededVehicles[8], passenger: seededEmployees[25], origin: 'Pratap Nagar', dest: 'Odoo Tech Campus, Dharampeth', dist: 4.5, fare: 30.0, daysAgo: 4 },
+    { driver: seededEmployees[14], vehicle: seededVehicles[9], passenger: seededEmployees[26], origin: 'Manish Nagar', dest: 'Odoo Tech Campus, Dharampeth', dist: 9.5, fare: 45.0, daysAgo: 4 },
+
+    // 5 days ago
+    { driver: driverUser, vehicle: seededVehicles[0], passenger: seededEmployees[27], origin: 'Nagpur Railway Station', dest: 'Odoo Tech Campus, Dharampeth', dist: 4.8, fare: 40.0, daysAgo: 5 },
+    { driver: femaleDriverUser, vehicle: seededVehicles[1], passenger: seededEmployees[28], origin: 'Wardha Road Tech Colony', dest: 'Odoo Tech Campus, Dharampeth', dist: 8.2, fare: 35.0, daysAgo: 5 },
+    { driver: seededEmployees[4], vehicle: seededVehicles[2], passenger: seededEmployees[29], origin: 'Sitabuldi Square', dest: 'Odoo Tech Campus, Dharampeth', dist: 3.5, fare: 30.0, daysAgo: 5 },
+
+    // 6 days ago
+    { driver: seededEmployees[8], vehicle: seededVehicles[4], passenger: seededEmployees[30], origin: 'MIHAN IT Park', dest: 'Odoo Tech Campus, Dharampeth', dist: 12.4, fare: 65.0, daysAgo: 6 },
+    { driver: seededEmployees[9], vehicle: seededVehicles[5], passenger: passengerUser, origin: 'Civil Lines', dest: 'Odoo Tech Campus, Dharampeth', dist: 3.2, fare: 25.0, daysAgo: 6 },
+    { driver: seededEmployees[13], vehicle: seededVehicles[6], passenger: seededEmployees[5], origin: 'Sadar Market', dest: 'Odoo Tech Campus, Dharampeth', dist: 4.1, fare: 30.0, daysAgo: 6 },
   ];
 
   for (const cr of completedRidesData) {
@@ -293,7 +321,7 @@ async function main() {
     });
   }
 
-  console.log(`✓ 10 COMPLETED Shared Trips seeded with authentic passenger bookings!`);
+  console.log(`✓ ${completedRidesData.length} COMPLETED Shared Trips seeded across 25 active employees within the 7-day window!`);
 
   // 6. Seed 10 SCHEDULED Upcoming Rides
   const upcomingRidesData = [
