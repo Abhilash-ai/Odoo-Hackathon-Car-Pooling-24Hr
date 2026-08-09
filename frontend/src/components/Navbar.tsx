@@ -4,7 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { BrandLogo } from './BrandLogo';
 import { 
   Navigation, PlusCircle, Search, Wallet as WalletIcon, Car, Shield, 
-  LogOut, Sun, Moon, Sparkles, User as UserIcon, Lock
+  LogOut, Sun, Moon, Sparkles, User as UserIcon, Lock, Settings
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -47,7 +47,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           <nav className="hidden md:flex items-center space-x-1">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+              className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
                 activeTab === 'dashboard'
                   ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold'
                   : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -58,7 +58,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
 
             <button
               onClick={() => setActiveTab('find')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+              className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
                 activeTab === 'find'
                   ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold'
                   : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -70,7 +70,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
 
             <button
               onClick={() => setActiveTab('offer')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+              className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
                 activeTab === 'offer'
                   ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold'
                   : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -82,7 +82,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
 
             <button
               onClick={() => setActiveTab('live-tracking')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+              className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
                 activeTab === 'live-tracking'
                   ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold'
                   : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -94,7 +94,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
 
             <button
               onClick={() => setActiveTab('my-trips')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+              className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
                 activeTab === 'my-trips'
                   ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold'
                   : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -105,7 +105,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
 
             <button
               onClick={() => setActiveTab('vehicles')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+              className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
                 activeTab === 'vehicles'
                   ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold'
                   : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -117,7 +117,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
 
             <button
               onClick={() => setActiveTab('impact')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+              className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
                 activeTab === 'impact'
                   ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold'
                   : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -129,7 +129,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             {user.role === 'ADMINISTRATOR' && (
               <button
                 onClick={() => setActiveTab('admin')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
                   activeTab === 'admin'
                     ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-extrabold'
                     : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -142,8 +142,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           </nav>
         )}
 
-        {/* RIGHT CONTROLS: ROLE FEATURE TABS, WALLET, THEME TOGGLE */}
-        <div className="flex items-center space-x-3">
+        {/* RIGHT CONTROLS: ROLE FEATURE TABS, WALLET, SETTINGS, THEME TOGGLE */}
+        <div className="flex items-center space-x-2.5">
           
           {/* ROLE / FEATURE TABS */}
           {user && (
@@ -207,6 +207,21 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             >
               <WalletIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
               <span>₹{user.walletBalance.toFixed(0)}</span>
+            </button>
+          )}
+
+          {/* SETTINGS MODULE NAVIGATION */}
+          {user && (
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`p-2 rounded-xl border transition ${
+                activeTab === 'settings' || activeTab === 'saved-places' || activeTab === 'help-support'
+                  ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-600 border-emerald-300 dark:border-emerald-800'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-800'
+              }`}
+              title="Settings & Preferences"
+            >
+              <Settings className="w-4 h-4" />
             </button>
           )}
 

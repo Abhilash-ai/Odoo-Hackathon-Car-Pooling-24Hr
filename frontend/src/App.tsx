@@ -15,6 +15,9 @@ import { VehiclesPage } from './pages/VehiclesPage';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { ImpactPage } from './pages/ImpactPage';
 import { MyTrips } from './pages/MyTrips';
+import { SettingsPage } from './pages/SettingsPage';
+import { SavedPlacesPage } from './pages/SavedPlacesPage';
+import { HelpSupportPage } from './pages/HelpSupportPage';
 
 const AppContent: React.FC = () => {
   const { user, loading } = useAuth();
@@ -85,6 +88,18 @@ const AppContent: React.FC = () => {
 
         {activeTab === 'my-trips' && (
           <MyTrips setActiveTab={setActiveTab} setSelectedTripId={setSelectedTripId} />
+        )}
+
+        {activeTab === 'settings' && (
+          <SettingsPage setActiveTab={setActiveTab} />
+        )}
+
+        {activeTab === 'saved-places' && (
+          <SavedPlacesPage onBack={() => setActiveTab('settings')} />
+        )}
+
+        {activeTab === 'help-support' && (
+          <HelpSupportPage onBack={() => setActiveTab('settings')} />
         )}
       </main>
 

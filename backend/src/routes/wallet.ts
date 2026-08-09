@@ -75,11 +75,11 @@ router.post('/recharge', authenticateToken, async (req: AuthRequest, res: Respon
   });
 });
 
-// PAY TRIP FARE (INR ₹)
+// PAY TRIP FARE (SUPPORTING WALLET, CARD, UPI, & CASH)
 router.post('/pay-trip', authenticateToken, async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
 
-  const { tripId } = req.body;
+  const { tripId, paymentMethod = 'WALLET' } = req.body;
   if (!tripId) return res.status(400).json({ error: 'Trip ID required' });
 
   const trip = await prisma.trip.findUnique({
@@ -94,8 +94,8 @@ router.post('/pay-trip', authenticateToken, async (req: AuthRequest, res: Respon
   const fare = trip.fareAmount;
 
   let passengerWallet = await prisma.wallet.findUnique({ where: { userId: req.user.id } });
-  if (!passengerWallet || passengerWallet.balance < fare) {
-    return res.status(400).json({ error: `Insufficient wallet balance (Current: ₹${passengerWallet?.balance || 0}). Recharge wallet.` });
+  if (!passengerWallet) {
+    passengerWallet = await prisma.wallet.create({ data: { userId: req.user.id, balance: 0.0 } });
   }
 
   let driverWallet = await prisma.wallet.findUnique({ where: { userId: trip.driverId } });
@@ -103,56 +103,145 @@ router.post('/pay-trip', authenticateToken, async (req: AuthRequest, res: Respon
     driverWallet = await prisma.wallet.create({ data: { userId: trip.driverId, balance: 0.0 } });
   }
 
-  await prisma.$transaction(async (tx) => {
-    // Deduct passenger balance
-    await tx.wallet.update({
-      where: { id: passengerWallet.id },
-      data: { balance: { decrement: fare } }
+  // Handle WALLET Payment
+  if (paymentMethod === 'WALLET') {
+    if (passengerWallet.balance < fare) {
+      return res.status(400).json({ 
+        error: `Insufficient wallet balance (Current: ₹${passengerWallet.balance.toFixed(2)}). Please recharge wallet or select Card/UPI.` 
+      });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Deduct passenger balance
+      await tx.wallet.update({
+        where: { id: passengerWallet!.id },
+        data: { balance: { decrement: fare } }
+      });
+
+      await tx.transaction.create({
+        data: {
+          walletId: passengerWallet!.id,
+          amount: fare,
+          type: 'DEBIT',
+          description: `Commute Fare: ${trip.ride.originName} → ${trip.ride.destName}`,
+          referenceId: `TRIP-${trip.id.slice(0, 8).toUpperCase()}`,
+          paymentMethod: 'WALLET',
+        }
+      });
+
+      // Credit driver balance
+      await tx.wallet.update({
+        where: { id: driverWallet!.id },
+        data: { balance: { increment: fare } }
+      });
+
+      await tx.transaction.create({
+        data: {
+          walletId: driverWallet!.id,
+          amount: fare,
+          type: 'CREDIT',
+          description: `Fare Received: Commute with ${req.user!.fullName}`,
+          referenceId: `EARN-${trip.id.slice(0, 8).toUpperCase()}`,
+          paymentMethod: 'WALLET',
+        }
+      });
+
+      // Update trip status
+      await tx.trip.update({
+        where: { id: trip.id },
+        data: {
+          paymentStatus: 'PAID',
+          status: 'COMPLETED',
+        }
+      });
     });
 
-    await tx.transaction.create({
-      data: {
-        walletId: passengerWallet.id,
-        amount: fare,
-        type: 'DEBIT',
-        description: `Commute Fare: ${trip.ride.originName} → ${trip.ride.destName}`,
-        referenceId: `TRIP-${trip.id.slice(0, 8).toUpperCase()}`,
-        paymentMethod: 'INTERNAL_WALLET',
-      }
+    return res.json({
+      message: 'Wallet payment processed successfully',
+      fareAmount: fare,
+      paymentMethod: 'WALLET',
+      tripId: trip.id,
+    });
+  }
+
+  // Handle CARD or UPI Sandbox Payment
+  if (paymentMethod === 'CARD' || paymentMethod === 'UPI') {
+    await prisma.$transaction(async (tx) => {
+      await tx.transaction.create({
+        data: {
+          walletId: passengerWallet!.id,
+          amount: fare,
+          type: 'DEBIT',
+          description: `Commute Fare via ${paymentMethod}: ${trip.ride.originName} → ${trip.ride.destName}`,
+          referenceId: `${paymentMethod}-${Date.now().toString(36).toUpperCase()}`,
+          paymentMethod,
+        }
+      });
+
+      await tx.wallet.update({
+        where: { id: driverWallet!.id },
+        data: { balance: { increment: fare } }
+      });
+
+      await tx.transaction.create({
+        data: {
+          walletId: driverWallet!.id,
+          amount: fare,
+          type: 'CREDIT',
+          description: `Fare Received via ${paymentMethod}: Commute with ${req.user!.fullName}`,
+          referenceId: `EARN-${trip.id.slice(0, 8).toUpperCase()}`,
+          paymentMethod,
+        }
+      });
+
+      await tx.trip.update({
+        where: { id: trip.id },
+        data: {
+          paymentStatus: 'PAID',
+          status: 'COMPLETED',
+        }
+      });
     });
 
-    // Credit driver balance
-    await tx.wallet.update({
-      where: { id: driverWallet.id },
-      data: { balance: { increment: fare } }
+    return res.json({
+      message: `${paymentMethod} payment processed successfully`,
+      fareAmount: fare,
+      paymentMethod,
+      tripId: trip.id,
+    });
+  }
+
+  // Handle CASH Payment Option
+  if (paymentMethod === 'CASH') {
+    await prisma.$transaction(async (tx) => {
+      await tx.transaction.create({
+        data: {
+          walletId: passengerWallet!.id,
+          amount: fare,
+          type: 'DEBIT',
+          description: `Cash Payment Pending to Driver: ${trip.ride.originName} → ${trip.ride.destName}`,
+          referenceId: `CASH-${trip.id.slice(0, 8).toUpperCase()}`,
+          paymentMethod: 'CASH',
+        }
+      });
+
+      await tx.trip.update({
+        where: { id: trip.id },
+        data: {
+          paymentStatus: 'CASH_PENDING',
+        }
+      });
     });
 
-    await tx.transaction.create({
-      data: {
-        walletId: driverWallet.id,
-        amount: fare,
-        type: 'CREDIT',
-        description: `Fare Received: Commute with ${req.user!.fullName}`,
-        referenceId: `EARN-${trip.id.slice(0, 8).toUpperCase()}`,
-        paymentMethod: 'INTERNAL_WALLET',
-      }
+    return res.json({
+      message: 'Cash payment recorded. Please pay fare in cash directly to driver upon arrival.',
+      fareAmount: fare,
+      paymentMethod: 'CASH',
+      tripId: trip.id,
     });
+  }
 
-    // Update trip status
-    await tx.trip.update({
-      where: { id: trip.id },
-      data: {
-        paymentStatus: 'PAID',
-        status: 'COMPLETED',
-      }
-    });
-  });
-
-  return res.json({
-    message: 'Payment processed successfully',
-    fareAmount: fare,
-    tripId: trip.id,
-  });
+  return res.status(400).json({ error: 'Invalid payment method selected' });
 });
 
 export default router;

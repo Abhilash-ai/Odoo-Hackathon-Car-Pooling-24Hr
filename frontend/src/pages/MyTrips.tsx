@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { Trip } from '../types';
+import { VoiceCallModal } from '../components/VoiceCallModal';
 import { 
   Clock, Navigation, CheckCircle2, DollarSign, Car, User, 
-  MapPin, Calendar, ArrowRight, Shield, Lock
+  MapPin, Calendar, ArrowRight, Shield, Lock, Phone, MessageSquare
 } from 'lucide-react';
 
 interface MyTripsProps {
@@ -17,12 +18,31 @@ export const MyTrips: React.FC<MyTripsProps> = ({ setActiveTab, setSelectedTripI
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // VOICE CALL MODAL STATE
+  const [showCallModal, setShowCallModal] = useState(false);
+  const [activeCallTarget, setActiveCallTarget] = useState<{
+    name: string;
+    role: string;
+    avatar?: string;
+    route?: string;
+  } | null>(null);
+
   useEffect(() => {
     api.get('/trips/my-trips')
       .then(res => setTrips(res.data))
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
   }, []);
+
+  const handleStartCall = (targetName: string, targetRole: string, targetAvatar?: string, routeName?: string) => {
+    setActiveCallTarget({
+      name: targetName,
+      role: targetRole,
+      avatar: targetAvatar,
+      route: routeName,
+    });
+    setShowCallModal(true);
+  };
 
   if (loading) {
     return <div className="p-8 text-center text-slate-500 dark:text-slate-400 text-xs font-semibold">Loading trips...</div>;
@@ -46,6 +66,9 @@ export const MyTrips: React.FC<MyTripsProps> = ({ setActiveTab, setSelectedTripI
         <div className="space-y-5">
           {trips.map((trip) => {
             const isDriver = user?.id === trip.driverId;
+            const targetPerson = isDriver ? trip.passenger : trip.driver;
+            const targetRoleLabel = isDriver ? 'Passenger' : 'Driver';
+
             const statusColor = 
               trip.status === 'IN_PROGRESS' || trip.status === 'STARTED'
                 ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 font-extrabold'
@@ -93,16 +116,33 @@ export const MyTrips: React.FC<MyTripsProps> = ({ setActiveTab, setSelectedTripI
                     </p>
                   </div>
 
-                  <div className="space-y-1">
-                    <span className="text-[10px] text-slate-500 uppercase font-bold block">
-                      {isDriver ? 'Passenger' : 'Driver'}
-                    </span>
-                    <p className="font-bold text-slate-800 dark:text-slate-200">
-                      {isDriver ? trip.passenger.fullName : trip.driver.fullName}
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Dept: {isDriver ? trip.passenger.department : trip.driver.department}
-                    </p>
+                  <div className="space-y-1 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-500 uppercase font-bold block">
+                        {targetRoleLabel}
+                      </span>
+                      <p className="font-bold text-slate-800 dark:text-slate-200">
+                        {targetPerson.fullName}
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Dept: {targetPerson.department || 'Engineering'}
+                      </p>
+                    </div>
+
+                    {/* ENCRYPTED VOICE CALL BUTTON */}
+                    <button
+                      onClick={() => handleStartCall(
+                        targetPerson.fullName,
+                        targetRoleLabel,
+                        targetPerson.avatarUrl,
+                        `${trip.ride.originName} → ${trip.ride.destName}`
+                      )}
+                      className="px-3 py-1.5 bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-200 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition"
+                      title={`Call ${targetRoleLabel}`}
+                    >
+                      <Phone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>Call</span>
+                    </button>
                   </div>
                 </div>
 
@@ -136,6 +176,18 @@ export const MyTrips: React.FC<MyTripsProps> = ({ setActiveTab, setSelectedTripI
             );
           })}
         </div>
+      )}
+
+      {/* VOICE CALL MODAL */}
+      {activeCallTarget && (
+        <VoiceCallModal
+          isOpen={showCallModal}
+          onClose={() => setShowCallModal(false)}
+          participantName={activeCallTarget.name}
+          participantRole={activeCallTarget.role}
+          participantAvatar={activeCallTarget.avatar}
+          tripRoute={activeCallTarget.route}
+        />
       )}
 
     </div>
