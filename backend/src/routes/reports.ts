@@ -169,6 +169,7 @@ router.get('/impact', authenticateToken, async (req: AuthRequest, res: Response)
     const org = await prisma.organization.findUnique({ where: { id: orgId } });
     const petrolPrice = org?.petrolPricePerLiter || 101.50;
 
+    // 1. PERSONAL ACTIVITY
     const myCompletedTrips = await prisma.trip.findMany({
       where: {
         OR: [{ driverId: userId }, { passengerId: userId }],
@@ -188,6 +189,73 @@ router.get('/impact', authenticateToken, async (req: AuthRequest, res: Response)
     const myCommuteDistanceKm = myCompletedTrips.reduce((acc, t) => acc + (t.distanceKm || 0), 0);
     const myTotalFareInr = myCompletedTrips.reduce((acc, t) => acc + (t.fareAmount || 0), 0);
 
+    // 2. ORGANIZATION-WIDE COMMUTE DATA
+    const allOrgCompletedTrips = await prisma.trip.findMany({
+      where: { organizationId: orgId, status: { in: ['COMPLETED', 'PAYMENT_COMPLETED'] } },
+      include: {
+        ride: { include: { vehicle: true } },
+        driver: { select: { id: true, fullName: true, department: true, avatarUrl: true } },
+        passenger: { select: { id: true, fullName: true, department: true, avatarUrl: true } }
+      }
+    });
+
+    const totalActiveOrgEmployees = await prisma.user.count({ where: { organizationId: orgId } });
+    const uniqueParticipantsSet = new Set<string>();
+    allOrgCompletedTrips.forEach(t => {
+      if (t.driverId) uniqueParticipantsSet.add(t.driverId);
+      if (t.passengerId) uniqueParticipantsSet.add(t.passengerId);
+    });
+
+    const orgPooledDistanceKm = allOrgCompletedTrips.reduce((acc, t) => acc + (t.distanceKm || 0), 0);
+    const orgEstimatedFuelAvoidedLiters = Number((orgPooledDistanceKm / 17.5).toFixed(1));
+    const orgEstimatedCo2AvoidedKg = Number((orgPooledDistanceKm * 0.192).toFixed(1));
+    const orgEstimatedSharedSavingsInr = Number((orgPooledDistanceKm * (petrolPrice / 17.5)).toFixed(0));
+
+    // Department Breakdown
+    const deptMap: Record<string, { trips: number; distance: number; co2: number }> = {};
+    allOrgCompletedTrips.forEach(t => {
+      const dept = t.passenger?.department || t.driver?.department || 'Engineering';
+      if (!deptMap[dept]) deptMap[dept] = { trips: 0, distance: 0, co2: 0 };
+      deptMap[dept].trips += 1;
+      deptMap[dept].distance += (t.distanceKm || 0);
+      deptMap[dept].co2 += (t.distanceKm || 0) * 0.192;
+    });
+
+    const departmentBreakdown = Object.keys(deptMap).map(d => ({
+      department: d,
+      tripsCount: deptMap[d].trips,
+      distanceKm: Number(deptMap[d].distance.toFixed(1)),
+      co2AvoidedKg: Number(deptMap[d].co2.toFixed(1)),
+    })).sort((a, b) => b.distanceKm - a.distanceKm);
+
+    // Top Contributor Employees
+    const empMap: Record<string, { id: string; name: string; dept: string; avatar: string; trips: number; distance: number; co2: number }> = {};
+    allOrgCompletedTrips.forEach(t => {
+      const passenger = t.passenger;
+      if (passenger) {
+        if (!empMap[passenger.id]) {
+          empMap[passenger.id] = { id: passenger.id, name: passenger.fullName, dept: passenger.department || 'Engineering', avatar: passenger.avatarUrl || '', trips: 0, distance: 0, co2: 0 };
+        }
+        empMap[passenger.id].trips += 1;
+        empMap[passenger.id].distance += (t.distanceKm || 0);
+        empMap[passenger.id].co2 += (t.distanceKm || 0) * 0.192;
+      }
+    });
+
+    const topContributors = Object.values(empMap)
+      .map(e => ({
+        id: e.id,
+        fullName: e.name,
+        department: e.dept,
+        avatarUrl: e.avatar,
+        tripsCount: e.trips,
+        distanceKm: Number(e.distance.toFixed(1)),
+        co2AvoidedKg: Number(e.co2.toFixed(1)),
+      }))
+      .sort((a, b) => b.distanceKm - a.distanceKm)
+      .slice(0, 5);
+
+    // Contextual Scope Metrics (Org-wide if Admin, Personal if Employee)
     const qualifyingTripsWhereClause = isAdmin
       ? { organizationId: orgId, status: { in: ['COMPLETED', 'PAYMENT_COMPLETED'] } }
       : {
@@ -195,28 +263,32 @@ router.get('/impact', authenticateToken, async (req: AuthRequest, res: Response)
           status: { in: ['COMPLETED', 'PAYMENT_COMPLETED'] }
         };
 
-    const qualifyingCompletedTrips = await prisma.trip.findMany({
-      where: qualifyingTripsWhereClause,
-      include: { ride: { include: { vehicle: true } }, passenger: true }
-    });
-
-    const sharedTripsCount = qualifyingCompletedTrips.length;
-    const uniquePassengerIds = new Set(qualifyingCompletedTrips.map(t => t.passengerId));
-    const verifiedParticipants = uniquePassengerIds.size;
-
-    const pooledDistanceKm = qualifyingCompletedTrips.reduce((acc, t) => acc + (t.distanceKm || 0), 0);
-    
-    const estimatedFuelAvoidedLiters = Number((pooledDistanceKm / 17.5).toFixed(1));
-    const estimatedCo2AvoidedKg = Number((pooledDistanceKm * 0.192).toFixed(1));
-    const estimatedSharedSavingsInr = Number((pooledDistanceKm * (petrolPrice / 17.5)).toFixed(0));
+    const scopeTrips = isAdmin ? allOrgCompletedTrips : myCompletedTrips;
+    const sharedTripsCount = scopeTrips.length;
+    const pooledDistanceKm = isAdmin ? orgPooledDistanceKm : myCommuteDistanceKm;
 
     return res.json({
       role: req.user.role,
       isAdmin,
       organizationName: org?.name || 'Odoo India',
-      hasSharedData: sharedTripsCount > 0,
+      hasSharedData: allOrgCompletedTrips.length > 0,
       hasPersonalActivity: myCompletedTrips.length > 0 || myRidesOffered > 0,
 
+      // Organization-Level Impact (For Admin)
+      organizationImpact: {
+        totalActiveEmployees: totalActiveOrgEmployees,
+        verifiedParticipants: uniqueParticipantsSet.size,
+        participationRate: totalActiveOrgEmployees > 0 ? Number(((uniqueParticipantsSet.size / totalActiveOrgEmployees) * 100).toFixed(1)) : 0,
+        sharedTripsCount: allOrgCompletedTrips.length,
+        pooledDistanceKm: Number(orgPooledDistanceKm.toFixed(1)),
+        estimatedFuelAvoidedLiters: orgEstimatedFuelAvoidedLiters,
+        estimatedCo2AvoidedKg: orgEstimatedCo2AvoidedKg,
+        estimatedSharedSavingsInr: orgEstimatedSharedSavingsInr,
+        departmentBreakdown,
+        topContributors,
+      },
+
+      // Personal Activity (Secondary for Admin, Primary for Employee)
       personalActivity: {
         completedTripsCount: myCompletedTrips.length,
         ridesTakenCount: myRidesTaken,
@@ -228,11 +300,11 @@ router.get('/impact', authenticateToken, async (req: AuthRequest, res: Response)
 
       carpoolImpact: {
         sharedTripsCount,
-        verifiedParticipants,
+        verifiedParticipants: uniqueParticipantsSet.size,
         pooledDistanceKm: Number(pooledDistanceKm.toFixed(1)),
-        estimatedFuelAvoidedLiters,
-        estimatedCo2AvoidedKg,
-        estimatedSharedSavingsInr,
+        estimatedFuelAvoidedLiters: Number((pooledDistanceKm / 17.5).toFixed(1)),
+        estimatedCo2AvoidedKg: Number((pooledDistanceKm * 0.192).toFixed(1)),
+        estimatedSharedSavingsInr: Number((pooledDistanceKm * (petrolPrice / 17.5)).toFixed(0)),
       },
 
       configAssumptions: {
