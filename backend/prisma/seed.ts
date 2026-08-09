@@ -283,6 +283,7 @@ async function main() {
         status: 'COMPLETED',
         boardingOtp: '100' + cr.daysAgo,
         isCheckedIn: true,
+        createdAt: depTime,
         startedAt: depTime,
         completedAt: new Date(depTime.getTime() + 15 * 60 * 1000),
         distanceKm: cr.dist,
