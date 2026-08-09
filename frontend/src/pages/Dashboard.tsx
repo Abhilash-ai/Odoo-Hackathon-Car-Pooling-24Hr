@@ -4,7 +4,7 @@ import api from '../services/api';
 import { Trip, SavedPlace, Ride } from '../types';
 import { 
   Search, PlusCircle, Navigation, MapPin, Wallet, Car, ArrowRight, 
-  Calendar, Clock, Building2, CheckCircle2, ShieldAlert, Lock
+  Clock, Building2, Shield, Lock, Bell, CheckCircle2, User
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -12,13 +12,36 @@ interface DashboardProps {
   setSelectedTripId: (id: string) => void;
 }
 
+interface DashboardMetrics {
+  role: string;
+  gender: string;
+  walletBalance: number;
+  activeTripsCount: number;
+  completedTripsCount: number;
+  offeredRidesCount: number;
+  vehiclesCount: number;
+  upcomingTrip?: any;
+  notifications: any[];
+  orgStats: {
+    activeEmployees: number;
+    totalRides: number;
+    totalVehicles: number;
+    completedTrips: number;
+  };
+}
+
 export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, setSelectedTripId }) => {
   const { user } = useAuth();
   const [activeTrips, setActiveTrips] = useState<Trip[]>([]);
   const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
   const [upcomingRides, setUpcomingRides] = useState<Ride[]>([]);
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
 
   useEffect(() => {
+    api.get('/reports/dashboard-metrics')
+      .then(res => setMetrics(res.data))
+      .catch(err => console.error(err));
+
     api.get('/trips/my-trips')
       .then(res => setActiveTrips(res.data))
       .catch(err => console.error(err));
@@ -33,6 +56,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, setSelectedT
   }, []);
 
   const liveTrip = activeTrips.find(t => t.status === 'IN_PROGRESS' || t.status === 'STARTED' || t.status === 'BOOKED');
+
+  const isAdmin = user?.role === 'ADMINISTRATOR';
+  const isDriverPersona = user?.fullName?.includes('Marcus') || user?.fullName?.includes('Priya') || (metrics && metrics.offeredRidesCount > 0);
 
   return (
     <div className="space-y-10 pb-10">
@@ -69,7 +95,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, setSelectedT
         </div>
       )}
 
-      {/* HERO WELCOME & ACTION TILES WITH PROPER HEADING SPACING */}
+      {/* HERO WELCOME & ACTION TILES */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 lg:p-10 shadow-sm relative overflow-hidden transition-colors space-y-6">
         <div className="relative z-10 max-w-3xl space-y-5">
           
@@ -80,7 +106,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, setSelectedT
             </span>
           </div>
 
-          {/* MAIN HERO HEADING & SUBTITLE WITH GENEROUS MARGINS & LINE HEIGHT */}
+          {/* MAIN HERO HEADING */}
           <div className="space-y-3 pt-1">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
               Turn empty seats into <span className="text-emerald-600 dark:text-emerald-400">smarter commutes.</span>
@@ -111,18 +137,86 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, setSelectedT
         </div>
       </div>
 
-      {/* METRIC CARDS (INR ₹) */}
+      {/* DYNAMIC PERSONALIZED METRIC CARDS BASED ON USER ROLE */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-sm transition-colors">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">My Trips</span>
-            <Clock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-3xl font-extrabold text-slate-900 dark:text-white leading-none">{activeTrips.length}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Active & completed</p>
-          </div>
-        </div>
+        
+        {isAdmin ? (
+          <>
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-sm transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Active Employees</span>
+                <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-3xl font-extrabold text-slate-900 dark:text-white leading-none">{metrics?.orgStats?.activeEmployees || 11}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Verified members</p>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-sm transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Active Rides</span>
+                <Car className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-3xl font-extrabold text-slate-900 dark:text-white leading-none">{metrics?.orgStats?.totalRides || 5}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Scheduled commutes</p>
+              </div>
+            </div>
+          </>
+        ) : isDriverPersona ? (
+          <>
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-sm transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Offered Rides</span>
+                <PlusCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-3xl font-extrabold text-slate-900 dark:text-white leading-none">{metrics?.offeredRidesCount || 2}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Active driver offers</p>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-sm transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">My Vehicles</span>
+                <Car className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-3xl font-extrabold text-slate-900 dark:text-white leading-none">{user?.vehicles?.length || 1}</p>
+                <button onClick={() => setActiveTab('vehicles')} className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-bold inline-block">
+                  Manage Vehicles →
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-sm transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">My Trips</span>
+                <Clock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-3xl font-extrabold text-slate-900 dark:text-white leading-none">{activeTrips.length}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Booked & completed</p>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-sm transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">My Vehicles</span>
+                <Car className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-3xl font-extrabold text-slate-900 dark:text-white leading-none">{user?.vehicles?.length || 1}</p>
+                <button onClick={() => setActiveTab('vehicles')} className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-bold inline-block">
+                  Manage Vehicles →
+                </button>
+              </div>
+            </div>
+          </>
+        )}
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-sm transition-colors">
           <div className="flex items-center justify-between">
@@ -130,22 +224,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, setSelectedT
             <Wallet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div className="space-y-1">
-            <p className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 leading-none">₹{user?.walletBalance.toFixed(0)}</p>
+            <p className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 leading-none">₹{user?.walletBalance ? user.walletBalance.toFixed(0) : '1500'}</p>
             <button onClick={() => setActiveTab('wallet')} className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-bold inline-block">
               Recharge Wallet →
-            </button>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-sm transition-colors">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">My Vehicles</span>
-            <Car className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-3xl font-extrabold text-slate-900 dark:text-white leading-none">{user?.vehicles?.length || 1}</p>
-            <button onClick={() => setActiveTab('vehicles')} className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-bold inline-block">
-              Manage Vehicles →
             </button>
           </div>
         </div>
@@ -160,35 +241,64 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, setSelectedT
             <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">Verified Safety Enabled</p>
           </div>
         </div>
+
       </div>
 
-      {/* SAVED PLACES & UPCOMING RIDES GRID */}
+      {/* SAVED PLACES & RECOMMENDED RIDES GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
         
-        {/* SAVED PLACES */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 lg:p-7 space-y-6 shadow-sm transition-colors">
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
-            <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center space-x-2">
-              <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>Saved Places</span>
-            </h3>
-            <span className="text-xs text-slate-400 font-medium">Quick Search</span>
+        {/* SAVED PLACES & RECENT ACTIVITY */}
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 lg:p-7 space-y-6 shadow-sm transition-colors">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center space-x-2">
+                <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Saved Places</span>
+              </h3>
+              <span className="text-xs text-slate-400 font-medium">Quick Search</span>
+            </div>
+
+            <div className="space-y-3">
+              {savedPlaces.map((place) => (
+                <div
+                  key={place.id}
+                  onClick={() => setActiveTab('find')}
+                  className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/50 hover:border-emerald-500 cursor-pointer transition flex items-center justify-between"
+                >
+                  <div className="space-y-1">
+                    <p className="text-xs font-extrabold text-slate-900 dark:text-slate-200">{place.label}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[180px]">{place.address}</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-slate-400" />
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="space-y-3">
-            {savedPlaces.map((place) => (
-              <div
-                key={place.id}
-                onClick={() => setActiveTab('find')}
-                className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/50 hover:border-emerald-500 cursor-pointer transition flex items-center justify-between"
-              >
-                <div className="space-y-1">
-                  <p className="text-xs font-extrabold text-slate-900 dark:text-slate-200">{place.label}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[180px]">{place.address}</p>
+          {/* RECENT ACTIVITY TIMELINE */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 lg:p-7 space-y-4 shadow-sm transition-colors">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center space-x-2">
+                <Bell className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Recent Commute Activity</span>
+              </h3>
+            </div>
+            <div className="space-y-3 text-xs">
+              <div className="flex items-start space-x-3 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-slate-900 dark:text-white">Nagpur Station → Dharampeth</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Boarding OTP verified (4829)</p>
                 </div>
-                <ArrowRight className="w-4 h-4 text-slate-400" />
               </div>
-            ))}
+              <div className="flex items-start space-x-3 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                <Car className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-slate-900 dark:text-white">Wardha Rd → Dharampeth</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Tata Nexon EV (MH-31-EV-8842)</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

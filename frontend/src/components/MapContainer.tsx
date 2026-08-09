@@ -93,7 +93,7 @@ export const MapContainer: React.FC<MapProps> = ({
         <Marker position={origin} icon={pickupIcon}>
           <Popup className="custom-popup font-sans">
             <div className="p-1">
-              <strong className="text-xs text-emerald-600 block font-bold">INDIAN PICKUP POINT</strong>
+              <strong className="text-xs text-emerald-600 block font-bold">PICKUP LOCATION</strong>
               <span className="text-xs text-slate-800 dark:text-slate-200">{originName}</span>
             </div>
           </Popup>
@@ -103,7 +103,7 @@ export const MapContainer: React.FC<MapProps> = ({
         <Marker position={dest} icon={destIcon}>
           <Popup className="custom-popup font-sans">
             <div className="p-1">
-              <strong className="text-xs text-rose-600 block font-bold">INDIAN DESTINATION</strong>
+              <strong className="text-xs text-rose-600 block font-bold">DESTINATION</strong>
               <span className="text-xs text-slate-800 dark:text-slate-200">{destName}</span>
             </div>
           </Popup>
@@ -114,21 +114,20 @@ export const MapContainer: React.FC<MapProps> = ({
           <Marker position={currentPos} icon={carIcon}>
             <Popup>
               <div className="p-1 font-sans">
-                <strong className="text-xs text-emerald-600 block">COMMUTE IN PROGRESS (INDIA)</strong>
+                <strong className="text-xs text-emerald-600 block">COMMUTE IN PROGRESS</strong>
                 <span className="text-[11px] text-slate-700 dark:text-slate-300">En route through Nagpur</span>
               </div>
             </Popup>
           </Marker>
         )}
 
-        {/* Polyline Route */}
+        {/* Solid High-Visibility Road Polyline */}
         {polyline.length > 0 && (
           <Polyline
             positions={polyline}
-            color={theme === 'dark' ? '#10b981' : '#059669'}
-            weight={5}
-            opacity={0.9}
-            dashArray="1, 8"
+            color={theme === 'dark' ? '#34d399' : '#059669'}
+            weight={6}
+            opacity={0.85}
           />
         )}
       </LeafletMap>

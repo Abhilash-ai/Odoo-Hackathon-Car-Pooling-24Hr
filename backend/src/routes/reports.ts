@@ -5,6 +5,84 @@ import { AuthRequest } from '../types.js';
 
 const router = Router();
 
+// GET PERSONALIZED DASHBOARD METRICS FOR CURRENT LOGGED-IN USER
+router.get('/dashboard-metrics', authenticateToken, async (req: AuthRequest, res: Response) => {
+  if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+
+  const userId = req.user.id || (req.user as any).userId;
+  const orgId = req.user.organizationId;
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { organization: true, wallet: true, vehicles: true }
+    });
+
+    const activeTripsCount = await prisma.trip.count({
+      where: {
+        OR: [{ driverId: userId }, { passengerId: userId }],
+        status: { in: ['BOOKED', 'STARTED', 'IN_PROGRESS'] }
+      }
+    });
+
+    const completedTripsCount = await prisma.trip.count({
+      where: {
+        OR: [{ driverId: userId }, { passengerId: userId }],
+        status: { in: ['COMPLETED', 'PAYMENT_COMPLETED'] }
+      }
+    });
+
+    const offeredRidesCount = await prisma.ride.count({
+      where: { driverId: userId, status: 'SCHEDULED' }
+    });
+
+    const upcomingTrip = await prisma.trip.findFirst({
+      where: {
+        OR: [{ driverId: userId }, { passengerId: userId }],
+        status: { in: ['BOOKED', 'STARTED', 'IN_PROGRESS'] }
+      },
+      include: {
+        ride: { include: { vehicle: true } },
+        driver: { select: { id: true, fullName: true, avatarUrl: true, department: true, phone: true } },
+        passenger: { select: { id: true, fullName: true, avatarUrl: true, department: true, phone: true } },
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const notifications = await prisma.notification.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 4
+    });
+
+    const orgActiveEmployees = await prisma.user.count({ where: { organizationId: orgId } });
+    const orgTotalRides = await prisma.ride.count({ where: { organizationId: orgId, status: 'SCHEDULED' } });
+    const orgTotalVehicles = await prisma.vehicle.count({ where: { organizationId: orgId } });
+    const orgCompletedTrips = await prisma.trip.count({ where: { organizationId: orgId } });
+
+    return res.json({
+      role: req.user.role,
+      gender: req.user.gender,
+      walletBalance: user?.wallet?.balance || 0,
+      activeTripsCount,
+      completedTripsCount,
+      offeredRidesCount,
+      vehiclesCount: user?.vehicles?.length || 0,
+      upcomingTrip,
+      notifications,
+      orgStats: {
+        activeEmployees: orgActiveEmployees,
+        totalRides: orgTotalRides,
+        totalVehicles: orgTotalVehicles,
+        completedTrips: orgCompletedTrips,
+      }
+    });
+  } catch (err) {
+    console.error('dashboard-metrics error:', err);
+    return res.status(500).json({ error: 'Failed to fetch dashboard metrics' });
+  }
+});
+
 // GET ADMIN COMMAND CENTER ANALYTICS (INR ₹)
 router.get('/admin', authenticateToken, async (req: AuthRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
@@ -27,7 +105,7 @@ router.get('/admin', authenticateToken, async (req: AuthRequest, res: Response) 
   const totalDistanceShared = completedTrips.reduce((acc, t) => acc + (t.distanceKm || 24.0), 0);
   const totalFareExchanged = completedTrips.reduce((acc, t) => acc + (t.fareAmount || 0), 0);
 
-  const fuelRate = (org?.petrolPricePerLiter || 101.50) / 17.5; // ~₹5.80 / km
+  const fuelRate = (org?.petrolPricePerLiter || 101.50) / 17.5;
   const estimatedFuelSavedLiters = (totalDistanceShared / 17.5).toFixed(1);
   const estimatedFuelCostSaved = (totalDistanceShared * fuelRate).toFixed(0);
   const co2SavedKg = (totalDistanceShared * 0.192).toFixed(1);
@@ -77,7 +155,7 @@ router.get('/impact', authenticateToken, async (req: AuthRequest, res: Response)
   const totalSharedKm = completedTrips.reduce((acc, t) => acc + (t.distanceKm || 24.0), 0) + 480.0;
   const totalPassengers = completedTrips.length + 84;
   const estimatedFuelSavedLiters = (totalSharedKm / 17.5).toFixed(1);
-  const estimatedCostSaved = (totalSharedKm * 5.8).toFixed(0); // ₹5.80 / km
+  const estimatedCostSaved = (totalSharedKm * 5.8).toFixed(0);
   const co2PreventedKg = (totalSharedKm * 0.192).toFixed(1);
 
   return res.json({
